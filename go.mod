@@ -1,4 +1,4 @@
-module github.com/vladfc/event-driven-ecommerce
+module github.com/vladfc/event-driven-ecommerce-app
 
 go 1.26.1
 

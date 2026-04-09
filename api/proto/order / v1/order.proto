@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1;inventoryv1";
+
+
+service OrderService {}
+
+message CreateOrderRequest {
+  string 
+}
+
+// Order:
+//OrderID
+//Items
+//Price
