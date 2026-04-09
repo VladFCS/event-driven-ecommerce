@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "github.com/vlad/golang-microservice/gen/inventory/v1;inventoryv1";
+
+
+service PaymentService {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+  rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_REQUIRES_ACTION = 2;
+  PAYMENT_STATUS_AUTHORIZED = 3;
+  PAYMENT_STATUS_CAPTURED = 4;
+  PAYMENT_STATUS_FAILED = 5;
+  PAYMENT_STATUS_CANCELLED = 6;
+  PAYMENT_STATUS_REFUNDED = 7;
+}
+
+ enum Currency {
+    CURRENCY_UNSPECIFIED = 0;
+    CURRENCY_USD      = 1;
+}
+
+enum PaymentMethodType {
+  PAYMENT_METHOD_TYPE_UNSPECIFIED = 0;
+  PAYMENT_METHOD_TYPE_CARD = 1;
+  PAYMENT_METHOD_TYPE_CASH = 2;
+}
+
+message Money {
+  Currency currency = 1;
+  int64 amount_cents = 2;
+}
+
+message CreatePaymentRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  Money amount = 3;
+  PaymentMethodType payment_method = 4;
+  string payment_method_details = 5; // e.g., card details or cash info
+  string idempotency_key = 6; // for ensuring idempotent requests
+}
+
+message CreatePaymentResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+}
+
+message CancelPaymentRequest {
+  string payment_id = 1;
+  string reason = 2;
+}
+
+message CancelPaymentResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+}

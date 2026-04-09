@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "github.com/vlad/golang-microservice/gen/inventory/v1;inventoryv1"
+
+service InventoryService {
+  rpc GetStock(GetStockRequest) returns (GetStockResponse);
+};
+
+message Stock {
+  string product_id = 1;
+  int64 available = 2;
+}
+
+message GetStockRequest {
+  string product_id = 1;
+}
+
+message GetStockResponse {
+  Stock stock = 1;
+}

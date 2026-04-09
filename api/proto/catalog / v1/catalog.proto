@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "github.com/vlad/golang-microservice/gen/inventory/v1;inventoryv1"
+
+
+service CatalogService {
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+}
+
+ enum Currency {
+    CURRENCY_UNSPECIFIED = 0;
+    CURRENCY_USD      = 1;
+}
+
+message Product {
+  string product_id = 1;
+  string title = 2;
+  string description = 3;
+  int64 price_cents = 4;
+  Currency currency = 5; 
+}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message CreateProductRequest {
+  Product product = 1;
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
