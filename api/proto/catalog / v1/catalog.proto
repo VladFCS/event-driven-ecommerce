@@ -17,7 +17,7 @@ enum Currency {
 
 message Product {
   string product_id = 1;
-  string title = 2;
+  string name = 2;
   string description = 3;
   int64 price_cents = 4;
   Currency currency = 5;

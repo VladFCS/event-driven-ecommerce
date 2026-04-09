@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/auth/v1;authv1";
