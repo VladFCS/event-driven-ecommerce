@@ -12,7 +12,8 @@ service CatalogService {
 
  enum Currency {
     CURRENCY_UNSPECIFIED = 0;
-    CURRENCY_USD      = 1;
+    CURRENCY_USD = 1;
+    CURRENCY_EUR = 2;
 }
 
 message Product {
