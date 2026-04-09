@@ -1,9 +1,8 @@
 syntax = "proto3";
 
-package inventory.v1;
+package payment.v1;
 
-option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1;inventoryv1";
-
+option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1;paymentv1";
 
 service PaymentService {
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
@@ -22,10 +21,10 @@ enum PaymentStatus {
   PAYMENT_STATUS_REFUNDED = 7;
 }
 
- enum Currency {
-    CURRENCY_UNSPECIFIED = 0;
-    CURRENCY_USD      = 1;
-    CURRENCY_EUR = 2;
+enum Currency {
+  CURRENCY_UNSPECIFIED = 0;
+  CURRENCY_USD = 1;
+  CURRENCY_EUR = 2;
 }
 
 enum PaymentMethodType {
@@ -39,18 +38,34 @@ message Money {
   int64 amount_cents = 2;
 }
 
+message Payment {
+  string payment_id = 1;
+  string order_id = 2;
+  string customer_id = 3;
+  Money amount = 4;
+  PaymentMethodType payment_method = 5;
+  PaymentStatus status = 6;
+}
+
 message CreatePaymentRequest {
   string order_id = 1;
   string customer_id = 2;
   Money amount = 3;
   PaymentMethodType payment_method = 4;
-  string payment_method_details = 5; // e.g., card details or cash info
-  string idempotency_key = 6; // for ensuring idempotent requests
+  string payment_method_details = 5;
+  string idempotency_key = 6;
 }
 
 message CreatePaymentResponse {
+  Payment payment = 1;
+}
+
+message GetPaymentRequest {
   string payment_id = 1;
-  PaymentStatus status = 2;
+}
+
+message GetPaymentResponse {
+  Payment payment = 1;
 }
 
 message CancelPaymentRequest {
@@ -59,6 +74,5 @@ message CancelPaymentRequest {
 }
 
 message CancelPaymentResponse {
-  string payment_id = 1;
-  PaymentStatus status = 2;
+  Payment payment = 1;
 }

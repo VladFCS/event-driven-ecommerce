@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package inventory.v1;
+package order.v1;
 
-option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1;inventoryv1";
+option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1;orderv1";
 
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
@@ -41,6 +41,12 @@ message OrderItem {
   Money total_price = 6;
 }
 
+message CreateOrderItem {
+  string product_id = 1;
+  string sku = 2;
+  int32 quantity = 3;
+}
+
 message Address {
   string country = 1;
   string city = 2;
@@ -60,8 +66,12 @@ message Order {
   string created_at = 7;
   string updated_at = 8;
 }
-message CreateOrderReqeuest {
-  string user_id = 1;
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated CreateOrderItem items = 2;
+  Address shipping_address = 3;
+  string idempotency_key = 4;
 }
 
 message CreateOrderResponse {

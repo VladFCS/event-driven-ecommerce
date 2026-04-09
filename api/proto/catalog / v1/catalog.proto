@@ -1,19 +1,18 @@
 syntax = "proto3";
 
-package inventory.v1;
+package catalog.v1;
 
-option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1;inventoryv1"
-
+option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1;catalogv1";
 
 service CatalogService {
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
 }
 
- enum Currency {
-    CURRENCY_UNSPECIFIED = 0;
-    CURRENCY_USD = 1;
-    CURRENCY_EUR = 2;
+enum Currency {
+  CURRENCY_UNSPECIFIED = 0;
+  CURRENCY_USD = 1;
+  CURRENCY_EUR = 2;
 }
 
 message Product {
@@ -21,11 +20,15 @@ message Product {
   string title = 2;
   string description = 3;
   int64 price_cents = 4;
-  Currency currency = 5; 
+  Currency currency = 5;
 }
 
 message GetProductRequest {
   string product_id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
 }
 
 message CreateProductRequest {
