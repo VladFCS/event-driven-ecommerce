@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
+)
 
 var (
 	ErrProductNotFound = errors.New("product not found")
@@ -8,9 +12,9 @@ var (
 )
 
 type Product struct {
-	ID string
-	Name string
+	ID          string
+	Name        string
 	Description string
-	PriceCents float64
-	Currency string
+	PriceCents  int64
+	Currency    catalogv1.Currency
 }
