@@ -8,7 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/domain"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/handler"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/repository"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -21,7 +27,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	repository := repository.NewMemoryRepository([]domain.Product{
+		{
+			ID:          "p-100",
+			Name:        "Mechanical Keyboard",
+			Description: "Hot-swappable mechanical keyboard",
+			PriceCents:  12999,
+			Currency:    catalogv1.Currency_CURRENCY_USD,
+		},
+		{
+			ID:          "p-200",
+			Name:        "Wireless Mouse",
+			Description: "Ergonomic wireless mouse",
+			PriceCents:  5999,
+			Currency:    catalogv1.Currency_CURRENCY_USD,
+		},
+	})
+
+	service := service.NewCatalogService(repository)
+	grpcHandler := handler.NewGRPCHandler(service, log)
+
 	server := grpc.NewServer()
+	catalogv1.RegisterCatalogServiceServer(server, grpcHandler)
+
+	reflection.Register(server)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
