@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
@@ -9,26 +11,28 @@ import (
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
 )
 
-
 type OrderService struct {
 	repository repository.OrderRepository
 }
 
 func NewOrderService(repository repository.OrderRepository) *OrderService {
 	return &OrderService{
-		repository: repository,			
+		repository: repository,
 	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (domain.Order, error) {
-	if order.ID == "" || order.CustomerID == "" || len(order.Items) == 0 {
+	if strings.TrimSpace(order.CustomerID) == "" || len(order.Items) == 0 {
 		return domain.Order{}, domain.ErrInvalidOrder
+	}
+	if strings.TrimSpace(order.ID) == "" {
+		order.ID = newOrderID()
 	}
 
 	var totalAmount int64
 
 	for i, item := range order.Items {
-		if item.ProductID == "" || item.Quantity <= 0 || item.UnitPrice.AmountCents <= 0 {
+		if strings.TrimSpace(item.ProductID) == "" || item.Quantity <= 0 || item.UnitPrice.AmountCents <= 0 {
 			return domain.Order{}, domain.ErrInvalidOrder
 		}
 
@@ -54,8 +58,12 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 }
 
 func (s *OrderService) GetOrderByID(ctx context.Context, orderId string) (domain.Order, error) {
-	if orderId == "" {
+	if strings.TrimSpace(orderId) == "" {
 		return domain.Order{}, domain.ErrInvalidOrderID
 	}
 	return s.repository.GetOrderByID(ctx, orderId)
+}
+
+func newOrderID() string {
+	return fmt.Sprintf("ord-%d", time.Now().UTC().UnixNano())
 }
