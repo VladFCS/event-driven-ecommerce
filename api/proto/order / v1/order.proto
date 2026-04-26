@@ -44,7 +44,9 @@ message OrderItem {
 message CreateOrderItem {
   string product_id = 1;
   string sku = 2;
-  int32 quantity = 3;
+  string product_name = 3;
+  int32 quantity = 4;
+  Money unit_price = 5;
 }
 
 message Address {

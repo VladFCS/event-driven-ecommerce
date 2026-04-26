@@ -271,7 +271,9 @@ type CreateOrderItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	Sku           string                 `protobuf:"bytes,2,opt,name=sku,proto3" json:"sku,omitempty"`
-	Quantity      int32                  `protobuf:"varint,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	ProductName   string                 `protobuf:"bytes,3,opt,name=product_name,json=productName,proto3" json:"product_name,omitempty"`
+	Quantity      int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	UnitPrice     *Money                 `protobuf:"bytes,5,opt,name=unit_price,json=unitPrice,proto3" json:"unit_price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -320,11 +322,25 @@ func (x *CreateOrderItem) GetSku() string {
 	return ""
 }
 
+func (x *CreateOrderItem) GetProductName() string {
+	if x != nil {
+		return x.ProductName
+	}
+	return ""
+}
+
 func (x *CreateOrderItem) GetQuantity() int32 {
 	if x != nil {
 		return x.Quantity
 	}
 	return 0
+}
+
+func (x *CreateOrderItem) GetUnitPrice() *Money {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return nil
 }
 
 type Address struct {
@@ -952,12 +968,15 @@ const file_order___v1_order_proto_rawDesc = "" +
 	"\n" +
 	"unit_price\x18\x05 \x01(\v2\x0f.order.v1.MoneyR\tunitPrice\x120\n" +
 	"\vtotal_price\x18\x06 \x01(\v2\x0f.order.v1.MoneyR\n" +
-	"totalPrice\"^\n" +
+	"totalPrice\"\xb1\x01\n" +
 	"\x0fCreateOrderItem\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x10\n" +
-	"\x03sku\x18\x02 \x01(\tR\x03sku\x12\x1a\n" +
-	"\bquantity\x18\x03 \x01(\x05R\bquantity\"\xa4\x01\n" +
+	"\x03sku\x18\x02 \x01(\tR\x03sku\x12!\n" +
+	"\fproduct_name\x18\x03 \x01(\tR\vproductName\x12\x1a\n" +
+	"\bquantity\x18\x04 \x01(\x05R\bquantity\x12.\n" +
+	"\n" +
+	"unit_price\x18\x05 \x01(\v2\x0f.order.v1.MoneyR\tunitPrice\"\xa4\x01\n" +
 	"\aAddress\x12\x18\n" +
 	"\acountry\x18\x01 \x01(\tR\acountry\x12\x12\n" +
 	"\x04city\x18\x02 \x01(\tR\x04city\x12\x16\n" +
@@ -1058,29 +1077,30 @@ var file_order___v1_order_proto_depIdxs = []int32{
 	1,  // 0: order.v1.Money.currency:type_name -> order.v1.Currency
 	2,  // 1: order.v1.OrderItem.unit_price:type_name -> order.v1.Money
 	2,  // 2: order.v1.OrderItem.total_price:type_name -> order.v1.Money
-	3,  // 3: order.v1.Order.items:type_name -> order.v1.OrderItem
-	2,  // 4: order.v1.Order.total_amount:type_name -> order.v1.Money
-	0,  // 5: order.v1.Order.status:type_name -> order.v1.OrderStatus
-	5,  // 6: order.v1.Order.shipping_address:type_name -> order.v1.Address
-	4,  // 7: order.v1.CreateOrderRequest.items:type_name -> order.v1.CreateOrderItem
-	5,  // 8: order.v1.CreateOrderRequest.shipping_address:type_name -> order.v1.Address
-	6,  // 9: order.v1.CreateOrderResponse.order:type_name -> order.v1.Order
-	6,  // 10: order.v1.GetOrderResponse.order:type_name -> order.v1.Order
-	6,  // 11: order.v1.CancelOrderResponse.order:type_name -> order.v1.Order
-	6,  // 12: order.v1.ListOrdersByCustomerResponse.orders:type_name -> order.v1.Order
-	7,  // 13: order.v1.OrderService.CreateOrder:input_type -> order.v1.CreateOrderRequest
-	9,  // 14: order.v1.OrderService.GetOrder:input_type -> order.v1.GetOrderRequest
-	11, // 15: order.v1.OrderService.CancelOrder:input_type -> order.v1.CancelOrderRequest
-	13, // 16: order.v1.OrderService.ListOrdersByCustomer:input_type -> order.v1.ListOrdersByCustomerRequest
-	8,  // 17: order.v1.OrderService.CreateOrder:output_type -> order.v1.CreateOrderResponse
-	10, // 18: order.v1.OrderService.GetOrder:output_type -> order.v1.GetOrderResponse
-	12, // 19: order.v1.OrderService.CancelOrder:output_type -> order.v1.CancelOrderResponse
-	14, // 20: order.v1.OrderService.ListOrdersByCustomer:output_type -> order.v1.ListOrdersByCustomerResponse
-	17, // [17:21] is the sub-list for method output_type
-	13, // [13:17] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	2,  // 3: order.v1.CreateOrderItem.unit_price:type_name -> order.v1.Money
+	3,  // 4: order.v1.Order.items:type_name -> order.v1.OrderItem
+	2,  // 5: order.v1.Order.total_amount:type_name -> order.v1.Money
+	0,  // 6: order.v1.Order.status:type_name -> order.v1.OrderStatus
+	5,  // 7: order.v1.Order.shipping_address:type_name -> order.v1.Address
+	4,  // 8: order.v1.CreateOrderRequest.items:type_name -> order.v1.CreateOrderItem
+	5,  // 9: order.v1.CreateOrderRequest.shipping_address:type_name -> order.v1.Address
+	6,  // 10: order.v1.CreateOrderResponse.order:type_name -> order.v1.Order
+	6,  // 11: order.v1.GetOrderResponse.order:type_name -> order.v1.Order
+	6,  // 12: order.v1.CancelOrderResponse.order:type_name -> order.v1.Order
+	6,  // 13: order.v1.ListOrdersByCustomerResponse.orders:type_name -> order.v1.Order
+	7,  // 14: order.v1.OrderService.CreateOrder:input_type -> order.v1.CreateOrderRequest
+	9,  // 15: order.v1.OrderService.GetOrder:input_type -> order.v1.GetOrderRequest
+	11, // 16: order.v1.OrderService.CancelOrder:input_type -> order.v1.CancelOrderRequest
+	13, // 17: order.v1.OrderService.ListOrdersByCustomer:input_type -> order.v1.ListOrdersByCustomerRequest
+	8,  // 18: order.v1.OrderService.CreateOrder:output_type -> order.v1.CreateOrderResponse
+	10, // 19: order.v1.OrderService.GetOrder:output_type -> order.v1.GetOrderResponse
+	12, // 20: order.v1.OrderService.CancelOrder:output_type -> order.v1.CancelOrderResponse
+	14, // 21: order.v1.OrderService.ListOrdersByCustomer:output_type -> order.v1.ListOrdersByCustomerResponse
+	18, // [18:22] is the sub-list for method output_type
+	14, // [14:18] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_order___v1_order_proto_init() }
