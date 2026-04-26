@@ -52,3 +52,10 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 
 	return s.repository.CreateOrder(ctx, order)
 }
+
+func (s *OrderService) GetOrderByID(ctx context.Context, orderId string) (domain.Order, error) {
+	if orderId == "" {
+		return domain.Order{}, domain.ErrInvalidOrderID
+	}
+	return s.repository.GetOrderByID(ctx, orderId)
+}

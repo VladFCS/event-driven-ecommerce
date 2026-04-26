@@ -11,6 +11,7 @@ var (
 	ErrOrderNotFound      = errors.New("order not found")
 	ErrInvalidOrder       = errors.New("invalid order")
 	ErrOrderAlreadyExists = errors.New("order already exists")
+	ErrInvalidOrderID = errors.New("invalid order id")
 )
 
 type Money struct {
