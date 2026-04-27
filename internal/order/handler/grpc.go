@@ -54,6 +54,19 @@ func (h *GRPCHandler) GetOrder(ctx context.Context, req *orderv1.GetOrderRequest
 	}, nil
 }
 
+func (h *GRPCHandler) CancelOrder(ctx context.Context, req *orderv1.CancelOrderRequest) (*orderv1.CancelOrderResponse, error) {
+	order, err := h.service.CancelOrder(ctx, req.GetOrderId())
+	if err != nil {
+		return nil, mapOrderError(err)
+	}
+
+	h.logger.InfoContext(ctx, "order cancelled", slog.String("order_id", order.ID), slog.String("customer_id", order.CustomerID))
+
+	return &orderv1.CancelOrderResponse{
+		Order: convertOrderToProto(order),
+	}, nil
+}
+
 func convertCreateOrderItems(items []*orderv1.CreateOrderItem) []domain.OrderItem {
 	converted := make([]domain.OrderItem, 0, len(items))
 	for _, item := range items {

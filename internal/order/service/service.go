@@ -64,6 +64,26 @@ func (s *OrderService) GetOrderByID(ctx context.Context, orderId string) (domain
 	return s.repository.GetOrderByID(ctx, orderId)
 }
 
+func (s *OrderService) CancelOrder(ctx context.Context, orderID string) (domain.Order, error) {
+	if strings.TrimSpace(orderID) == "" {
+		return domain.Order{}, domain.ErrInvalidOrderID
+	}
+
+	order, err := s.repository.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return domain.Order{}, err
+	}
+
+	if order.Status == orderv1.OrderStatus_ORDER_STATUS_CANCELLED {
+		return order, nil
+	}
+
+	order.Status = orderv1.OrderStatus_ORDER_STATUS_CANCELLED
+	order.UpdatedAt = time.Now()
+
+	return s.repository.UpdateOrder(ctx, order)
+}
+
 func newOrderID() string {
 	return fmt.Sprintf("ord-%d", time.Now().UTC().UnixNano())
 }
