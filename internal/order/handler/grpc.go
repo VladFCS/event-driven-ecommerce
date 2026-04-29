@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"time"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
@@ -64,6 +65,41 @@ func (h *GRPCHandler) CancelOrder(ctx context.Context, req *orderv1.CancelOrderR
 
 	return &orderv1.CancelOrderResponse{
 		Order: convertOrderToProto(order),
+	}, nil
+}
+
+func (h *GRPCHandler) ListOrdersByCustomer(ctx context.Context, req *orderv1.ListOrdersByCustomerRequest) (*orderv1.ListOrdersByCustomerResponse, error) {
+	orders, total, err := h.service.ListOrdersByCustomer(ctx, req.GetCustomerId(), req.GetPage(), req.GetPageSize())
+	if err != nil {
+		return nil, mapOrderError(err)
+	}
+
+	page := req.GetPage()
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize := req.GetPageSize()
+	if pageSize <= 0 {
+		if total > math.MaxInt32 {
+			pageSize = math.MaxInt32
+		} else {
+			pageSize = int32(total)
+		}
+	}
+
+	h.logger.InfoContext(ctx, "orders listed for customer", slog.String("customer_id", req.GetCustomerId()), slog.Int("total_orders", int((total))))
+
+	protoOrders := make([]*orderv1.Order, 0, len(orders))
+	for _, order := range orders {
+		protoOrders = append(protoOrders, convertOrderToProto(order))
+	}
+
+	return &orderv1.ListOrdersByCustomerResponse{
+		Orders:   protoOrders,
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
 	}, nil
 }
 
@@ -155,7 +191,7 @@ func convertOrderToProto(order domain.Order) *orderv1.Order {
 
 func mapOrderError(err error) error {
 	switch {
-	case errors.Is(err, domain.ErrInvalidOrder), errors.Is(err, domain.ErrInvalidOrderID):
+	case errors.Is(err, domain.ErrInvalidOrder), errors.Is(err, domain.ErrInvalidOrderID), errors.Is(err, domain.ErrInvalidCustomerID):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrOrderNotFound):
 		return status.Error(codes.NotFound, err.Error())

@@ -84,6 +84,14 @@ func (s *OrderService) CancelOrder(ctx context.Context, orderID string) (domain.
 	return s.repository.UpdateOrder(ctx, order)
 }
 
+func (s *OrderService) ListOrdersByCustomer(ctx context.Context, customerID string, page, pageSize int32) ([]domain.Order, int64, error) {
+	if strings.TrimSpace(customerID) == "" {
+		return nil, 0, domain.ErrInvalidCustomerID
+	}
+
+	return s.repository.ListOrdersByCustomer(ctx, customerID, page, pageSize)
+}
+
 func newOrderID() string {
 	return fmt.Sprintf("ord-%d", time.Now().UTC().UnixNano())
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"sync"
 
@@ -70,6 +71,14 @@ func (r *MemoryRepository) ListOrdersByCustomer(ctx context.Context, customerID 
 			filtered = append(filtered, cloneOrder(order))
 		}
 	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].CreatedAt.Equal(filtered[j].CreatedAt) {
+			return filtered[i].ID < filtered[j].ID
+		}
+
+		return filtered[i].CreatedAt.Before(filtered[j].CreatedAt)
+	})
 
 	total := int64(len(filtered))
 	if pageSize <= 0 {
