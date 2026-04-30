@@ -22,13 +22,13 @@ const (
 )
 
 type Stock struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Available     int64                  `protobuf:"varint,2,opt,name=available,proto3" json:"available,omitempty"`
-	Reserved      int64                  `protobuf:"varint,3,opt,name=reserved,proto3" json:"reserved,omitempty"`
-	Total         int64                  `protobuf:"varint,4,opt,name=total,proto3" json:"total,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ProductId         string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	AvailableQuantity int64                  `protobuf:"varint,2,opt,name=available_quantity,json=availableQuantity,proto3" json:"available_quantity,omitempty"`
+	ReservedQuantity  int64                  `protobuf:"varint,3,opt,name=reserved_quantity,json=reservedQuantity,proto3" json:"reserved_quantity,omitempty"`
+	TotalQuantity     int64                  `protobuf:"varint,4,opt,name=total_quantity,json=totalQuantity,proto3" json:"total_quantity,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Stock) Reset() {
@@ -68,23 +68,23 @@ func (x *Stock) GetProductId() string {
 	return ""
 }
 
-func (x *Stock) GetAvailable() int64 {
+func (x *Stock) GetAvailableQuantity() int64 {
 	if x != nil {
-		return x.Available
+		return x.AvailableQuantity
 	}
 	return 0
 }
 
-func (x *Stock) GetReserved() int64 {
+func (x *Stock) GetReservedQuantity() int64 {
 	if x != nil {
-		return x.Reserved
+		return x.ReservedQuantity
 	}
 	return 0
 }
 
-func (x *Stock) GetTotal() int64 {
+func (x *Stock) GetTotalQuantity() int64 {
 	if x != nil {
-		return x.Total
+		return x.TotalQuantity
 	}
 	return 0
 }
@@ -389,13 +389,13 @@ var File_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	"\x1cinventory/v1/inventory.proto\x12\finventory.v1\"v\n" +
+	"\x1cinventory/v1/inventory.proto\x12\finventory.v1\"\xa9\x01\n" +
 	"\x05Stock\x12\x1d\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1c\n" +
-	"\tavailable\x18\x02 \x01(\x03R\tavailable\x12\x1a\n" +
-	"\breserved\x18\x03 \x01(\x03R\breserved\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"k\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId\x12-\n" +
+	"\x12available_quantity\x18\x02 \x01(\x03R\x11availableQuantity\x12+\n" +
+	"\x11reserved_quantity\x18\x03 \x01(\x03R\x10reservedQuantity\x12%\n" +
+	"\x0etotal_quantity\x18\x04 \x01(\x03R\rtotalQuantity\"k\n" +
 	"\x13ReserveStockRequest\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1a\n" +

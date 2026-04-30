@@ -12,9 +12,9 @@ service InventoryService {
 
 message Stock {
   string product_id = 1;
-  int64 available = 2;
-  int64 reserved = 3;
-  int64 total = 4;
+  int64 available_quantity = 2;
+  int64 reserved_quantity = 3;
+  int64 total_quantity = 4;
 }
 
 message ReserveStockRequest {
