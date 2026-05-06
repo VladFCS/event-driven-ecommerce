@@ -8,7 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/handler"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/repository"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func NewLogger(serviceName string) *slog.Logger {
@@ -27,7 +33,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	repository := repository.NewMemoryRepository([]domain.Stock{
+		{
+			ProductID:         "p-100",
+			AvailableQuantity: 20,
+			ReservedQuantity:  0,
+			TotalQuantity:     20,
+		},
+		{
+			ProductID:         "p-200",
+			AvailableQuantity: 35,
+			ReservedQuantity:  0,
+			TotalQuantity:     35,
+		},
+	})
+
+	service := service.NewInventoryService(repository)
+	grpcHandler := handler.NewGRPCHandler(service, log)
+
 	server := grpc.NewServer()
+	inventoryv1.RegisterInventoryServiceServer(server, grpcHandler)
+
+	reflection.Register(server)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -41,7 +68,7 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	log.Info("shutting down catalog-service")
+	log.Info("shutting down inventory-service")
 	server.GracefulStop()
 }
 
