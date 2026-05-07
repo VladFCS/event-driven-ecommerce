@@ -124,7 +124,7 @@ func (h *HTTPHandler) Checkout(c *gin.Context) {
 		},
 	})
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		writeError(c, err)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *HTTPHandler) GetOrderByID(c *gin.Context) {
 		OrderID: req.OrderID,
 	})
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		writeError(c, err)
 		return
 	}
 

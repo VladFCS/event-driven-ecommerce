@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
@@ -14,32 +15,32 @@ import (
 
 func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*CheckoutResult, error) {
 	if in == nil {
-		return nil, errors.New("checkout request is nil")
+		return nil, fmt.Errorf("%w: checkout request is nil", ErrInvalidInput)
 	}
 	if strings.TrimSpace(in.CustomerID) == "" {
-		return nil, errors.New("customer id is required")
+		return nil, fmt.Errorf("%w: customer id is required", ErrInvalidInput)
 	}
 	if len(in.Items) == 0 {
-		return nil, errors.New("at least one item is required")
+		return nil, fmt.Errorf("%w: at least one item is required", ErrInvalidInput)
 	}
 	if strings.TrimSpace(in.ShippingAddress.Country) == "" ||
 		strings.TrimSpace(in.ShippingAddress.City) == "" ||
 		strings.TrimSpace(in.ShippingAddress.Street) == "" ||
 		strings.TrimSpace(in.ShippingAddress.PostalCode) == "" ||
 		strings.TrimSpace(in.ShippingAddress.House) == "" {
-		return nil, errors.New("complete shipping address is required")
+		return nil, fmt.Errorf("%w: complete shipping address is required", ErrInvalidInput)
 	}
 	if strings.TrimSpace(in.Payment.Method) == "" {
-		return nil, errors.New("payment method is required")
+		return nil, fmt.Errorf("%w: payment method is required", ErrInvalidInput)
 	}
 	if s.orderClient == nil {
-		return nil, errors.New("order client is not configured")
+		return nil, fmt.Errorf("%w: order client is not configured", ErrDownstreamFailed)
 	}
 	if s.inventoryClient == nil {
-		return nil, errors.New("inventory client is not configured")
+		return nil, fmt.Errorf("%w: inventory client is not configured", ErrDownstreamFailed)
 	}
 	if s.paymentClient == nil {
-		return nil, errors.New("payment client is not configured")
+		return nil, fmt.Errorf("%w: payment client is not configured", ErrDownstreamFailed)
 	}
 
 	orderItems, err := mapCheckoutItemsToOrderItems(in.Items)
@@ -54,10 +55,10 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 		IdempotencyKey:  strings.TrimSpace(in.IdempotencyKey),
 	})
 	if err != nil {
-		return nil, err
+		return nil, wrapDownstreamError("order create", err)
 	}
 	if orderResp == nil || orderResp.Order == nil {
-		return nil, errors.New("order response is empty")
+		return nil, fmt.Errorf("%w: order response is empty", ErrDownstreamFailed)
 	}
 
 	order := orderResp.Order
@@ -73,7 +74,7 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 			OrderID:   order.GetOrderId(),
 		})
 		if err != nil {
-			return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, err)
+			return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, wrapDownstreamError("inventory reserve stock", err))
 		}
 
 		reservedItems = append(reservedItems, item)
@@ -81,7 +82,7 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 
 	totalAmount := order.GetTotalAmount()
 	if totalAmount == nil {
-		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, errors.New("order total amount is empty"))
+		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, fmt.Errorf("%w: order total amount is empty", ErrDownstreamFailed))
 	}
 
 	paymentMethod, err := parsePaymentMethod(in.Payment.Method)
@@ -106,10 +107,10 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 		IdempotencyKey:       strings.TrimSpace(in.IdempotencyKey),
 	})
 	if err != nil {
-		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, err)
+		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, wrapDownstreamError("payment create", err))
 	}
 	if paymentResp == nil || paymentResp.Payment == nil {
-		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, errors.New("payment response is empty"))
+		return nil, s.compensateCheckoutFailure(ctx, order.GetOrderId(), reservedItems, fmt.Errorf("%w: payment response is empty", ErrDownstreamFailed))
 	}
 
 	return &CheckoutResult{
@@ -135,7 +136,7 @@ func (s *GatewayService) compensateCheckoutFailure(ctx context.Context, orderID 
 			OrderID:   orderID,
 		})
 		if err != nil {
-			compensationErrs = append(compensationErrs, err)
+			compensationErrs = append(compensationErrs, wrapDownstreamError("inventory release stock", err))
 		}
 	}
 
@@ -145,7 +146,7 @@ func (s *GatewayService) compensateCheckoutFailure(ctx context.Context, orderID 
 			Reason:  "checkout failed",
 		})
 		if err != nil {
-			compensationErrs = append(compensationErrs, err)
+			compensationErrs = append(compensationErrs, wrapDownstreamError("order cancel", err))
 		}
 	}
 

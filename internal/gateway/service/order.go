@@ -2,24 +2,24 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strings"
 )
 
 func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput) (*GetOrderByIDResult, error) {
 	if in == nil {
-		return nil, errors.New("get order request is nil")
+		return nil, fmt.Errorf("%w: get order request is nil", ErrInvalidInput)
 	}
 	if strings.TrimSpace(in.OrderID) == "" {
-		return nil, errors.New("order id is required")
+		return nil, fmt.Errorf("%w: order id is required", ErrInvalidInput)
 	}
 
 	resp, err := s.orderClient.GetOrder(ctx, in.OrderID)
 	if err != nil {
-		return nil, err
+		return nil, wrapDownstreamError("order get", err)
 	}
 	if resp == nil || resp.Order == nil {
-		return nil, errors.New("order response is empty")
+		return nil, fmt.Errorf("%w: order response is empty", ErrDownstreamFailed)
 	}
 
 	order := resp.Order

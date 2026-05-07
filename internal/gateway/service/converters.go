@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
@@ -38,7 +38,7 @@ func mapCheckoutItemsToOrderItems(items []CheckoutItem) ([]*orderv1.CreateOrderI
 	converted := make([]*orderv1.CreateOrderItem, 0, len(items))
 	for _, item := range items {
 		if strings.TrimSpace(item.ProductID) == "" || item.Quantity <= 0 || item.UnitPrice.AmountCents <= 0 {
-			return nil, errors.New("invalid checkout item")
+			return nil, fmt.Errorf("%w: invalid checkout item", ErrInvalidInput)
 		}
 
 		currency, err := parseOrderCurrency(item.UnitPrice.Currency)
@@ -79,7 +79,7 @@ func parseOrderCurrency(value string) (orderv1.Currency, error) {
 	case "EUR", "CURRENCY_EUR":
 		return orderv1.Currency_CURRENCY_EUR, nil
 	default:
-		return orderv1.Currency_CURRENCY_UNSPECIFIED, errors.New("unsupported currency")
+		return orderv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedCurrency, value)
 	}
 }
 
@@ -90,7 +90,7 @@ func mapOrderCurrencyToPayment(currency orderv1.Currency) (paymentv1.Currency, e
 	case orderv1.Currency_CURRENCY_EUR:
 		return paymentv1.Currency_CURRENCY_EUR, nil
 	default:
-		return paymentv1.Currency_CURRENCY_UNSPECIFIED, errors.New("unsupported payment currency")
+		return paymentv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %s", ErrUnsupportedCurrency, currency.String())
 	}
 }
 
@@ -101,6 +101,6 @@ func parsePaymentMethod(value string) (paymentv1.PaymentMethodType, error) {
 	case "CASH", "PAYMENT_METHOD_TYPE_CASH":
 		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CASH, nil
 	default:
-		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, errors.New("unsupported payment method")
+		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedPaymentMethod, value)
 	}
 }
