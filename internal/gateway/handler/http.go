@@ -102,6 +102,7 @@ type CheckoutResponse struct {
 }
 
 func (h *HTTPHandler) Register(r *gin.Engine) {
+	r.Use(requestIDMiddleware())
 	r.POST("/checkout", h.Checkout)
 	r.GET("/orders/:order_id", h.GetOrderByID)
 }
