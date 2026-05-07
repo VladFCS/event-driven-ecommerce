@@ -66,6 +66,12 @@ func WithCompensationTimeout(timeout time.Duration) Option {
 	}
 }
 
+func WithReadTimeout(timeout time.Duration) Option {
+	return func(s *GatewayService) {
+		s.readTimeout = timeout
+	}
+}
+
 func NewGatewayService(orderClient OrderClient, opts ...Option) *GatewayService {
 	service := &GatewayService{
 		orderClient:         orderClient,

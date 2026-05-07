@@ -14,7 +14,14 @@ func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput
 		return nil, fmt.Errorf("%w: order id is required", ErrInvalidInput)
 	}
 
-	resp, err := s.orderClient.GetOrder(ctx, in.OrderID)
+	opCtx := ctx
+	cancel := func () {}
+	if s.readTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.readTimeout)
+	}
+	defer cancel()
+
+	resp, err := s.orderClient.GetOrder(opCtx, in.OrderID)
 	if err != nil {
 		return nil, wrapDownstreamError("order get", err)
 	}
