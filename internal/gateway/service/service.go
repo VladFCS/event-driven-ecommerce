@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
 	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
@@ -27,9 +28,19 @@ type GatewayService struct {
 	orderClient     OrderClient
 	inventoryClient InventoryClient
 	paymentClient   PaymentClient
+
+	checkoutTimeout     time.Duration
+	readTimeout         time.Duration
+	compensationTimeout time.Duration
 }
 
 type Option func(*GatewayService)
+
+const (
+	defaultCheckoutTimeout     = 5 * time.Second
+	defaultReadTimeout         = 2 * time.Second
+	defaultCompensationTimeout = 2 * time.Second
+)
 
 func WithInventoryClient(client InventoryClient) Option {
 	return func(s *GatewayService) {
@@ -43,9 +54,24 @@ func WithPaymentClient(client PaymentClient) Option {
 	}
 }
 
+func WithCheckoutTimeout(timeout time.Duration) Option {
+	return func(s *GatewayService) {
+		s.checkoutTimeout = timeout
+	}
+}
+
+func WithCompensationTimeout(timeout time.Duration) Option {
+	return func(s *GatewayService) {
+		s.compensationTimeout = timeout
+	}
+}
+
 func NewGatewayService(orderClient OrderClient, opts ...Option) *GatewayService {
 	service := &GatewayService{
-		orderClient: orderClient,
+		orderClient:         orderClient,
+		checkoutTimeout:     defaultCheckoutTimeout,
+		readTimeout:         defaultReadTimeout,
+		compensationTimeout: defaultCompensationTimeout,
 	}
 
 	for _, opt := range opts {
