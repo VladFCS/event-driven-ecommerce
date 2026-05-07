@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"errors"
+	"strings"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
 	"google.golang.org/grpc"
@@ -64,6 +65,41 @@ func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 	}
 
 	return &CreateOrderResponse{
+		Order: grpcResp.GetOrder(),
+	}, nil
+}
+
+func (c *GRPCClient) GetOrder(ctx context.Context, orderID string) (*GetOrderResponse, error) {
+	if strings.TrimSpace(orderID) == "" {
+		return nil, errors.New("order id is required")
+	}
+
+	grpcResp, err := c.grpcClient.GetOrder(ctx, &orderv1.GetOrderRequest{
+		OrderId: orderID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetOrderResponse{
+		Order: grpcResp.GetOrder(),
+	}, nil
+}
+
+func (c *GRPCClient) CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error) {
+	if req == nil {
+		return nil, errors.New("cancel order request is nil")
+	}
+
+	grpcResp, err := c.grpcClient.CancelOrder(ctx, &orderv1.CancelOrderRequest{
+		OrderId: req.OrderID,
+		Reason:  req.Reason,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CancelOrderResponse{
 		Order: grpcResp.GetOrder(),
 	}, nil
 }
