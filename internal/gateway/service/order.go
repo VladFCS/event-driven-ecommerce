@@ -1,0 +1,49 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"strings"
+)
+
+func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput) (*GetOrderByIDResult, error) {
+	if in == nil {
+		return nil, errors.New("get order request is nil")
+	}
+	if strings.TrimSpace(in.OrderID) == "" {
+		return nil, errors.New("order id is required")
+	}
+
+	resp, err := s.orderClient.GetOrder(ctx, in.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || resp.Order == nil {
+		return nil, errors.New("order response is empty")
+	}
+
+	order := resp.Order
+	result := &GetOrderByIDResult{
+		OrderID:         order.GetOrderId(),
+		CustomerID:      order.GetCustomerId(),
+		OrderStatus:     order.GetStatus().String(),
+		Items:           make([]CheckoutItem, 0, len(order.GetItems())),
+		TotalAmount:     mapProtoMoney(order.GetTotalAmount()),
+		ShippingAddress: mapProtoAddress(order.GetShippingAddress()),
+		CreatedAt:       order.GetCreatedAt(),
+		UpdatedAt:       order.GetUpdatedAt(),
+	}
+
+	for _, item := range order.GetItems() {
+		result.Items = append(result.Items, CheckoutItem{
+			ProductID:   item.GetProductId(),
+			SKU:         item.GetSku(),
+			ProductName: item.GetProductName(),
+			Quantity:    item.GetQuantity(),
+			UnitPrice:   mapProtoMoney(item.GetUnitPrice()),
+			TotalPrice:  mapProtoMoney(item.GetTotalPrice()),
+		})
+	}
+
+	return result, nil
+}
