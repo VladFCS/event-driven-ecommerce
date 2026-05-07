@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -14,6 +15,8 @@ var (
 	ErrUnsupportedPaymentMethod = errors.New("unsupported payment method")
 	ErrDownstreamNotFound       = errors.New("downstream resource not found")
 	ErrDownstreamFailed         = errors.New("downstream service failed")
+	ErrTimeout                  = errors.New("operation timed out")
+	ErrRequestCanceled          = errors.New("request canceled")
 )
 
 func wrapDownstreamError(operation string, err error) error {
@@ -21,7 +24,12 @@ func wrapDownstreamError(operation string, err error) error {
 		return nil
 	}
 
-	if status.Code(err) == codes.NotFound {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded), status.Code(err) == codes.DeadlineExceeded:
+		return fmt.Errorf("%w: %s: %v", ErrTimeout, operation, err)
+	case errors.Is(err, context.Canceled), status.Code(err) == codes.Canceled:
+		return fmt.Errorf("%w: %s: %v", ErrRequestCanceled, operation, err)
+	case status.Code(err) == codes.NotFound:
 		return fmt.Errorf("%w: %s: %v", ErrDownstreamNotFound, operation, err)
 	}
 
