@@ -8,7 +8,7 @@ import (
 
 type PaymentRepository interface {
 	CreatePayment(ctx context.Context, payment domain.Payment) (domain.Payment, error)
-	GetPaymentByID(ctx context.Context, id string) (domain.Payment, error)
+	GetPaymentByID(ctx context.Context, paymentID string) (domain.Payment, error)
 	GetPaymentByIdempotencyKey(ctx context.Context, key string) (domain.Payment, error)
 	UpdatePayment(ctx context.Context, payment domain.Payment) (domain.Payment, error)
 }

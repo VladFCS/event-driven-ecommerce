@@ -45,13 +45,13 @@ func (r *MemoryRepository) CreateOrder(ctx context.Context, order domain.Order) 
 	return cloneOrder(cloned), nil
 }
 
-func (r *MemoryRepository) GetOrderByID(ctx context.Context, id string) (domain.Order, error) {
+func (r *MemoryRepository) GetOrderByID(ctx context.Context, orderID string) (domain.Order, error) {
 	_ = ctx
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	order, ok := r.orders[id]
+	order, ok := r.orders[orderID]
 	if !ok {
 		return domain.Order{}, domain.ErrOrderNotFound
 	}

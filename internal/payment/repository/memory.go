@@ -63,17 +63,17 @@ func (r *MemoryRepository) CreatePayment(ctx context.Context, payment domain.Pay
 	return clonePayment(cloned), nil
 }
 
-func (r *MemoryRepository) GetPaymentByID(ctx context.Context, id string) (domain.Payment, error) {
+func (r *MemoryRepository) GetPaymentByID(ctx context.Context, paymentID string) (domain.Payment, error) {
 	_ = ctx
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if strings.TrimSpace(id) == "" {
+	if strings.TrimSpace(paymentID) == "" {
 		return domain.Payment{}, domain.ErrInvalidPaymentID
 	}
 
-	payment, ok := r.payments[id]
+	payment, ok := r.payments[paymentID]
 	if !ok {
 		return domain.Payment{}, domain.ErrPaymentNotFound
 	}

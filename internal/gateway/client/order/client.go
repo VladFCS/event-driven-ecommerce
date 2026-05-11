@@ -13,7 +13,7 @@ import (
 type Client interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
 	CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error)
-	GetOrder(ctx context.Context, orderID string) (*GetOrderResponse, error)
+	GetOrderByID(ctx context.Context, orderID string) (*GetOrderByIDResponse, error)
 	ListOrdersByCustomer(ctx context.Context, req *ListOrdersByCustomerRequest) (*ListOrdersByCustomerResponse, error)
 }
 
@@ -37,7 +37,7 @@ type CancelOrderResponse struct {
 	Order *orderv1.Order
 }
 
-type GetOrderResponse struct {
+type GetOrderByIDResponse struct {
 	Order *orderv1.Order
 }
 
@@ -84,7 +84,7 @@ func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 	}, nil
 }
 
-func (c *GRPCClient) GetOrder(ctx context.Context, orderID string) (*GetOrderResponse, error) {
+func (c *GRPCClient) GetOrderByID(ctx context.Context, orderID string) (*GetOrderByIDResponse, error) {
 	if strings.TrimSpace(orderID) == "" {
 		return nil, errors.New("order id is required")
 	}
@@ -96,7 +96,7 @@ func (c *GRPCClient) GetOrder(ctx context.Context, orderID string) (*GetOrderRes
 		return nil, err
 	}
 
-	return &GetOrderResponse{
+	return &GetOrderByIDResponse{
 		Order: grpcResp.GetOrder(),
 	}, nil
 }

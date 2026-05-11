@@ -57,11 +57,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 	return s.repository.CreateOrder(ctx, order)
 }
 
-func (s *OrderService) GetOrderByID(ctx context.Context, orderId string) (domain.Order, error) {
-	if strings.TrimSpace(orderId) == "" {
+func (s *OrderService) GetOrderByID(ctx context.Context, orderID string) (domain.Order, error) {
+	if strings.TrimSpace(orderID) == "" {
 		return domain.Order{}, domain.ErrInvalidOrderID
 	}
-	return s.repository.GetOrderByID(ctx, orderId)
+	return s.repository.GetOrderByID(ctx, orderID)
 }
 
 func (s *OrderService) CancelOrder(ctx context.Context, orderID string) (domain.Order, error) {

@@ -11,7 +11,7 @@ import (
 
 type OrderClient interface {
 	CreateOrder(ctx context.Context, req *orderclient.CreateOrderRequest) (*orderclient.CreateOrderResponse, error)
-	GetOrder(ctx context.Context, orderID string) (*orderclient.GetOrderResponse, error)
+	GetOrderByID(ctx context.Context, orderID string) (*orderclient.GetOrderByIDResponse, error)
 	CancelOrder(ctx context.Context, req *orderclient.CancelOrderRequest) (*orderclient.CancelOrderResponse, error)
 }
 
