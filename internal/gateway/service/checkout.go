@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
-	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
 	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
 	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
 	paymentclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/payment"
@@ -58,7 +56,7 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 	orderResp, err := s.orderClient.CreateOrder(opCtx, &orderclient.CreateOrderRequest{
 		CustomerID:      strings.TrimSpace(in.CustomerID),
 		Items:           orderItems,
-		ShippingAddress: mapAddressToOrderProto(in.ShippingAddress),
+		ShippingAddress: mapAddressToOrderClient(in.ShippingAddress),
 		IdempotencyKey:  strings.TrimSpace(in.IdempotencyKey),
 	})
 	if err != nil {
@@ -69,66 +67,62 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 	}
 
 	order := orderResp.Order
-	reservedItems := make([]*orderv1.OrderItem, 0, len(order.GetItems()))
-	for _, item := range order.GetItems() {
-		if item == nil {
-			continue
-		}
-
+	reservedItems := make([]orderclient.OrderItem, 0, len(order.Items))
+	for _, item := range order.Items {
 		_, err := s.inventoryClient.ReserveStock(opCtx, &inventoryclient.ReserveStockRequest{
-			ProductID: item.GetProductId(),
-			Quantity:  int64(item.GetQuantity()),
-			OrderID:   order.GetOrderId(),
+			ProductID: item.ProductID,
+			Quantity:  int64(item.Quantity),
+			OrderID:   order.ID,
 		})
 		if err != nil {
-			return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, wrapDownstreamError("inventory reserve stock", err))
+			return nil, s.compensateCheckoutFailure(order.ID, reservedItems, wrapDownstreamError("inventory reserve stock", err))
 		}
 
 		reservedItems = append(reservedItems, item)
 	}
 
-	totalAmount := order.GetTotalAmount()
-	if totalAmount == nil {
-		return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, fmt.Errorf("%w: order total amount is empty", ErrDownstreamFailed))
+	totalAmount := order.TotalAmount
+	if totalAmount.AmountCents <= 0 || strings.TrimSpace(totalAmount.Currency) == "" {
+		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, fmt.Errorf("%w: order total amount is empty", ErrDownstreamFailed))
 	}
 
-	paymentMethod, err := parsePaymentMethod(in.Payment.Method)
+	paymentMethod, err := normalizePaymentMethod(in.Payment.Method)
 	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, err)
+		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, err)
 	}
 
-	paymentCurrency, err := mapOrderCurrencyToPayment(totalAmount.GetCurrency())
+	paymentCurrency, err := normalizeCurrency(totalAmount.Currency)
 	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, err)
+		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, err)
 	}
 
 	paymentResp, err := s.paymentClient.CreatePayment(opCtx, &paymentclient.CreatePaymentRequest{
-		OrderID:    order.GetOrderId(),
-		CustomerID: order.GetCustomerId(),
-		Amount: &paymentv1.Money{
+		OrderID:    order.ID,
+		CustomerID: order.CustomerID,
+		Amount: paymentclient.Money{
 			Currency:    paymentCurrency,
-			AmountCents: totalAmount.GetAmountCents(),
+			AmountCents: totalAmount.AmountCents,
 		},
 		PaymentMethod:        paymentMethod,
 		PaymentMethodDetails: strings.TrimSpace(in.Payment.MethodDetails),
 		IdempotencyKey:       strings.TrimSpace(in.IdempotencyKey),
 	})
 	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, wrapDownstreamError("payment create", err))
+		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, wrapDownstreamError("payment create", err))
 	}
 	if paymentResp == nil || paymentResp.Payment == nil {
-		return nil, s.compensateCheckoutFailure(order.GetOrderId(), reservedItems, fmt.Errorf("%w: payment response is empty", ErrDownstreamFailed))
+		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, fmt.Errorf("%w: payment response is empty", ErrDownstreamFailed))
 	}
 
 	return &CheckoutResult{
-		OrderID:       order.GetOrderId(),
-		PaymentID:     paymentResp.Payment.GetPaymentId(),
-		OrderStatus:   order.GetStatus().String(),
-		PaymentStatus: paymentResp.Payment.GetStatus().String(),
+		OrderID:       order.ID,
+		PaymentID:     paymentResp.Payment.ID,
+		OrderStatus:   order.Status,
+		PaymentStatus: paymentResp.Payment.Status,
 	}, nil
 }
 
-func (s *GatewayService) compensateCheckoutFailure(orderID string, reservedItems []*orderv1.OrderItem, originalErr error) error {
+func (s *GatewayService) compensateCheckoutFailure(orderID string, reservedItems []orderclient.OrderItem, originalErr error) error {
 	compensationErrs := make([]error, 0, len(reservedItems)+1)
 	cleanupCtx := context.Background()
 	cancel := func() {}
@@ -139,13 +133,9 @@ func (s *GatewayService) compensateCheckoutFailure(orderID string, reservedItems
 
 	for i := len(reservedItems) - 1; i >= 0; i-- {
 		item := reservedItems[i]
-		if item == nil {
-			continue
-		}
-
 		_, err := s.inventoryClient.ReleaseStock(cleanupCtx, &inventoryclient.ReleaseStockRequest{
-			ProductID: item.GetProductId(),
-			Quantity:  int64(item.GetQuantity()),
+			ProductID: item.ProductID,
+			Quantity:  int64(item.Quantity),
 			OrderID:   orderID,
 		})
 		if err != nil {

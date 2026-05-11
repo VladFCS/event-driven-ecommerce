@@ -9,6 +9,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+type Stock struct {
+	ProductID         string
+	AvailableQuantity int64
+	ReservedQuantity  int64
+	TotalQuantity     int64
+}
+
 type ReserveStockRequest struct {
 	ProductID string
 	Quantity  int64
@@ -16,7 +23,7 @@ type ReserveStockRequest struct {
 }
 
 type ReserveStockResponse struct {
-	Stock *inventoryv1.Stock
+	Stock *Stock
 }
 
 type ReleaseStockRequest struct {
@@ -26,7 +33,7 @@ type ReleaseStockRequest struct {
 }
 
 type ReleaseStockResponse struct {
-	Stock *inventoryv1.Stock
+	Stock *Stock
 }
 
 type GRPCClient struct {
@@ -54,7 +61,7 @@ func (c *GRPCClient) ReserveStock(ctx context.Context, req *ReserveStockRequest)
 	}
 
 	return &ReserveStockResponse{
-		Stock: grpcResp.GetStock(),
+		Stock: mapProtoStock(grpcResp.GetStock()),
 	}, nil
 }
 
@@ -73,6 +80,19 @@ func (c *GRPCClient) ReleaseStock(ctx context.Context, req *ReleaseStockRequest)
 	}
 
 	return &ReleaseStockResponse{
-		Stock: grpcResp.GetStock(),
+		Stock: mapProtoStock(grpcResp.GetStock()),
 	}, nil
+}
+
+func mapProtoStock(stock *inventoryv1.Stock) *Stock {
+	if stock == nil {
+		return nil
+	}
+
+	return &Stock{
+		ProductID:         stock.GetProductId(),
+		AvailableQuantity: stock.GetAvailableQuantity(),
+		ReservedQuantity:  stock.GetReservedQuantity(),
+		TotalQuantity:     stock.GetTotalQuantity(),
+	}
 }

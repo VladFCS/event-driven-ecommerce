@@ -31,24 +31,24 @@ func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput
 
 	order := resp.Order
 	result := &GetOrderByIDResult{
-		OrderID:         order.GetOrderId(),
-		CustomerID:      order.GetCustomerId(),
-		OrderStatus:     order.GetStatus().String(),
-		Items:           make([]CheckoutItem, 0, len(order.GetItems())),
-		TotalAmount:     mapProtoMoney(order.GetTotalAmount()),
-		ShippingAddress: mapProtoAddress(order.GetShippingAddress()),
-		CreatedAt:       order.GetCreatedAt(),
-		UpdatedAt:       order.GetUpdatedAt(),
+		OrderID:         order.ID,
+		CustomerID:      order.CustomerID,
+		OrderStatus:     order.Status,
+		Items:           make([]CheckoutItem, 0, len(order.Items)),
+		TotalAmount:     mapOrderMoney(order.TotalAmount),
+		ShippingAddress: mapOrderAddress(order.ShippingAddress),
+		CreatedAt:       order.CreatedAt,
+		UpdatedAt:       order.UpdatedAt,
 	}
 
-	for _, item := range order.GetItems() {
+	for _, item := range order.Items {
 		result.Items = append(result.Items, CheckoutItem{
-			ProductID:   item.GetProductId(),
-			SKU:         item.GetSku(),
-			ProductName: item.GetProductName(),
-			Quantity:    item.GetQuantity(),
-			UnitPrice:   mapProtoMoney(item.GetUnitPrice()),
-			TotalPrice:  mapProtoMoney(item.GetTotalPrice()),
+			ProductID:   item.ProductID,
+			SKU:         item.SKU,
+			ProductName: item.ProductName,
+			Quantity:    item.Quantity,
+			UnitPrice:   mapOrderMoney(item.UnitPrice),
+			TotalPrice:  mapOrderMoney(item.TotalPrice),
 		})
 	}
 
