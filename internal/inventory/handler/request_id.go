@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

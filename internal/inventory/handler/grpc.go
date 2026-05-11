@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 )
 
 func requestIDMiddleware() gin.HandlerFunc {

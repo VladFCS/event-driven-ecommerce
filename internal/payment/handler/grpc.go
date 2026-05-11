@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/service"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
