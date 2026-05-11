@@ -8,6 +8,7 @@ import (
 	"time"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/service"
 	"google.golang.org/grpc/codes"
@@ -37,7 +38,13 @@ func (h *GRPCHandler) CreateOrder(ctx context.Context, req *orderv1.CreateOrderR
 		return nil, mapOrderError(err)
 	}
 
-	h.logger.InfoContext(ctx, "order created", slog.String("order_id", order.ID), slog.String("customer_id", order.CustomerID))
+	h.logger.InfoContext(
+		ctx,
+		"order created",
+		requestIDAttr(ctx),
+		slog.String("order_id", order.ID),
+		slog.String("customer_id", order.CustomerID),
+	)
 
 	return &orderv1.CreateOrderResponse{
 		Order: convertOrderToProto(order),
@@ -61,7 +68,13 @@ func (h *GRPCHandler) CancelOrder(ctx context.Context, req *orderv1.CancelOrderR
 		return nil, mapOrderError(err)
 	}
 
-	h.logger.InfoContext(ctx, "order cancelled", slog.String("order_id", order.ID), slog.String("customer_id", order.CustomerID))
+	h.logger.InfoContext(
+		ctx,
+		"order cancelled",
+		requestIDAttr(ctx),
+		slog.String("order_id", order.ID),
+		slog.String("customer_id", order.CustomerID),
+	)
 
 	return &orderv1.CancelOrderResponse{
 		Order: convertOrderToProto(order),
@@ -88,7 +101,13 @@ func (h *GRPCHandler) ListOrdersByCustomer(ctx context.Context, req *orderv1.Lis
 		}
 	}
 
-	h.logger.InfoContext(ctx, "orders listed for customer", slog.String("customer_id", req.GetCustomerId()), slog.Int("total_orders", int((total))))
+	h.logger.InfoContext(
+		ctx,
+		"orders listed for customer",
+		requestIDAttr(ctx),
+		slog.String("customer_id", req.GetCustomerId()),
+		slog.Int("total_orders", int(total)),
+	)
 
 	protoOrders := make([]*orderv1.Order, 0, len(orders))
 	for _, order := range orders {
@@ -200,4 +219,8 @@ func mapOrderError(err error) error {
 	default:
 		return status.Error(codes.Internal, "internal server error")
 	}
+}
+
+func requestIDAttr(ctx context.Context) slog.Attr {
+	return slog.String("request_id", requestid.FromContext(ctx))
 }
