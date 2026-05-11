@@ -24,6 +24,11 @@ type PaymentClient interface {
 	CreatePayment(ctx context.Context, req *paymentclient.CreatePaymentRequest) (*paymentclient.CreatePaymentResponse, error)
 }
 
+type ReadinessStatus struct {
+	Ready               bool
+	MissingDependencies []string
+}
+
 type GatewayService struct {
 	orderClient     OrderClient
 	inventoryClient InventoryClient
@@ -87,4 +92,29 @@ func NewGatewayService(orderClient OrderClient, opts ...Option) *GatewayService 
 	}
 
 	return service
+}
+
+func (s *GatewayService) ReadinessStatus() ReadinessStatus {
+	if s == nil {
+		return ReadinessStatus{
+			Ready:               false,
+			MissingDependencies: []string{"gateway_service"},
+		}
+	}
+
+	missingDependencies := make([]string, 0, 3)
+	if s.orderClient == nil {
+		missingDependencies = append(missingDependencies, "order_client")
+	}
+	if s.inventoryClient == nil {
+		missingDependencies = append(missingDependencies, "inventory_client")
+	}
+	if s.paymentClient == nil {
+		missingDependencies = append(missingDependencies, "payment_client")
+	}
+
+	return ReadinessStatus{
+		Ready:               len(missingDependencies) == 0,
+		MissingDependencies: missingDependencies,
+	}
 }
