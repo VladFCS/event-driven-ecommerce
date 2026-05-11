@@ -9,24 +9,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 )
-
-const requestIDHeader = "X-Request-ID"
-
-type requestIDContextKey string
-
-const requestIDKey requestIDContextKey = "request_id"
 
 func requestIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		requestID := strings.TrimSpace(c.GetHeader(requestIDHeader))
+		requestID := strings.TrimSpace(c.GetHeader(requestid.Header))
 		if requestID == "" {
 			requestID = generateRequestID()
 		}
 
-		ctx := context.WithValue(c.Request.Context(), requestIDKey, requestID)
+		ctx := requestid.WithContext(c.Request.Context(), requestID)
 		c.Request = c.Request.WithContext(ctx)
-		c.Writer.Header().Set(requestIDHeader, requestID)
+		c.Writer.Header().Set(requestid.Header, requestID)
 
 		c.Next()
 	}
@@ -42,10 +37,5 @@ func generateRequestID() string {
 }
 
 func RequestIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	requestID, _ := ctx.Value(requestIDKey).(string)
-	return requestID
+	return requestid.FromContext(ctx)
 }

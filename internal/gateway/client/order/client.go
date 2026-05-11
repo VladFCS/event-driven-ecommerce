@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"google.golang.org/grpc"
 )
 
@@ -54,7 +55,7 @@ func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 		return nil, errors.New("create order request is nil")
 	}
 
-	grpcResp, err := c.grpcClient.CreateOrder(ctx, &orderv1.CreateOrderRequest{
+	grpcResp, err := c.grpcClient.CreateOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.CreateOrderRequest{
 		CustomerId:      req.CustomerID,
 		Items:           req.Items,
 		ShippingAddress: req.ShippingAddress,
@@ -74,7 +75,7 @@ func (c *GRPCClient) GetOrder(ctx context.Context, orderID string) (*GetOrderRes
 		return nil, errors.New("order id is required")
 	}
 
-	grpcResp, err := c.grpcClient.GetOrder(ctx, &orderv1.GetOrderRequest{
+	grpcResp, err := c.grpcClient.GetOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.GetOrderRequest{
 		OrderId: orderID,
 	})
 	if err != nil {
@@ -91,7 +92,7 @@ func (c *GRPCClient) CancelOrder(ctx context.Context, req *CancelOrderRequest) (
 		return nil, errors.New("cancel order request is nil")
 	}
 
-	grpcResp, err := c.grpcClient.CancelOrder(ctx, &orderv1.CancelOrderRequest{
+	grpcResp, err := c.grpcClient.CancelOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.CancelOrderRequest{
 		OrderId: req.OrderID,
 		Reason:  req.Reason,
 	})

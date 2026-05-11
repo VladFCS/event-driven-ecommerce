@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"google.golang.org/grpc"
 )
 
@@ -36,7 +37,7 @@ func (c *GRPCClient) CreatePayment(ctx context.Context, req *CreatePaymentReques
 		return nil, errors.New("create payment request is nil")
 	}
 
-	grpcResp, err := c.grpcClient.CreatePayment(ctx, &paymentv1.CreatePaymentRequest{
+	grpcResp, err := c.grpcClient.CreatePayment(requestid.WithOutgoingMetadata(ctx), &paymentv1.CreatePaymentRequest{
 		OrderId:              req.OrderID,
 		CustomerId:           req.CustomerID,
 		Amount:               req.Amount,

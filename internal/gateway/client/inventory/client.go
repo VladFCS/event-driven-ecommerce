@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"google.golang.org/grpc"
 )
 
@@ -43,7 +44,7 @@ func (c *GRPCClient) ReserveStock(ctx context.Context, req *ReserveStockRequest)
 		return nil, errors.New("reserve stock request is nil")
 	}
 
-	grpcResp, err := c.grpcClient.ReserveStock(ctx, &inventoryv1.ReserveStockRequest{
+	grpcResp, err := c.grpcClient.ReserveStock(requestid.WithOutgoingMetadata(ctx), &inventoryv1.ReserveStockRequest{
 		ProductId: req.ProductID,
 		Quantity:  req.Quantity,
 		OrderId:   req.OrderID,
@@ -62,7 +63,7 @@ func (c *GRPCClient) ReleaseStock(ctx context.Context, req *ReleaseStockRequest)
 		return nil, errors.New("release stock request is nil")
 	}
 
-	grpcResp, err := c.grpcClient.ReleaseStock(ctx, &inventoryv1.ReleaseStockRequest{
+	grpcResp, err := c.grpcClient.ReleaseStock(requestid.WithOutgoingMetadata(ctx), &inventoryv1.ReleaseStockRequest{
 		ProductId: req.ProductID,
 		Quantity:  req.Quantity,
 		OrderId:   req.OrderID,
