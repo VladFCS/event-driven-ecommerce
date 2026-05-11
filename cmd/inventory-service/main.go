@@ -51,7 +51,9 @@ func main() {
 	service := service.NewInventoryService(repository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(handler.RequestIDUnaryServerInterceptor()),
+	)
 	inventoryv1.RegisterInventoryServiceServer(server, grpcHandler)
 
 	reflection.Register(server)

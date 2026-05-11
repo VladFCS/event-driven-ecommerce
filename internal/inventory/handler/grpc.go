@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
 	"google.golang.org/grpc/codes"
@@ -45,6 +46,7 @@ func (h *GRPCHandler) ReserveStock(ctx context.Context, req *inventoryv1.Reserve
 	h.logger.InfoContext(
 		ctx,
 		"stock reserved",
+		requestIDAttr(ctx),
 		slog.String("product_id", req.GetProductId()),
 		slog.String("order_id", req.GetOrderId()),
 		slog.Int64("quantity", req.GetQuantity()),
@@ -64,6 +66,7 @@ func (h *GRPCHandler) ReleaseStock(ctx context.Context, req *inventoryv1.Release
 	h.logger.InfoContext(
 		ctx,
 		"stock released",
+		requestIDAttr(ctx),
 		slog.String("product_id", req.GetProductId()),
 		slog.String("order_id", req.GetOrderId()),
 		slog.Int64("quantity", req.GetQuantity()),
@@ -94,4 +97,8 @@ func mapInventoryError(err error) error {
 	default:
 		return status.Error(codes.Internal, "internal server error")
 	}
+}
+
+func requestIDAttr(ctx context.Context) slog.Attr {
+	return slog.String("request_id", requestid.FromContext(ctx))
 }
