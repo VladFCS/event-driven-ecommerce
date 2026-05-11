@@ -14,6 +14,7 @@ type Client interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
 	CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error)
 	GetOrder(ctx context.Context, orderID string) (*GetOrderResponse, error)
+	ListOrdersByCustomer(ctx context.Context, req *ListOrdersByCustomerRequest) (*ListOrdersByCustomerResponse, error)
 }
 
 type CreateOrderRequest struct {
@@ -38,6 +39,19 @@ type CancelOrderResponse struct {
 
 type GetOrderResponse struct {
 	Order *orderv1.Order
+}
+
+type ListOrdersByCustomerRequest struct {
+	CustomerID string
+	Page       int
+	PageSize   int
+}
+
+type ListOrdersByCustomerResponse struct {
+	Orders   []*orderv1.Order
+	Page     int
+	PageSize int
+	Total    int64
 }
 
 type GRPCClient struct {
@@ -84,6 +98,31 @@ func (c *GRPCClient) GetOrder(ctx context.Context, orderID string) (*GetOrderRes
 
 	return &GetOrderResponse{
 		Order: grpcResp.GetOrder(),
+	}, nil
+}
+
+func (c *GRPCClient) ListOrdersByCustomer(ctx context.Context, req *ListOrdersByCustomerRequest) (*ListOrdersByCustomerResponse, error) {
+	if req == nil {
+		return nil, errors.New("list orders by customer request is nil")
+	}
+	if strings.TrimSpace(req.CustomerID) == "" {
+		return nil, errors.New("customer id is required")
+	}
+
+	grpcResp, err := c.grpcClient.ListOrdersByCustomer(requestid.WithOutgoingMetadata(ctx), &orderv1.ListOrdersByCustomerRequest{
+		CustomerId: req.CustomerID,
+		Page:       int32(req.Page),
+		PageSize:   int32(req.PageSize),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListOrdersByCustomerResponse{
+		Orders:   grpcResp.GetOrders(),
+		Page:     int(grpcResp.GetPage()),
+		PageSize: int(grpcResp.GetPageSize()),
+		Total:    grpcResp.GetTotal(),
 	}, nil
 }
 
