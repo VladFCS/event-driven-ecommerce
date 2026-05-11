@@ -2,7 +2,11 @@ package requestid
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"strconv"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/metadata"
 )
@@ -44,4 +48,13 @@ func WithOutgoingMetadata(ctx context.Context) context.Context {
 	}
 
 	return metadata.AppendToOutgoingContext(ctx, MetadataKey, requestID)
+}
+
+func Generate() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return strconv.FormatInt(time.Now().UnixNano(), 16)
+	}
+
+	return hex.EncodeToString(buf)
 }

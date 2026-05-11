@@ -105,7 +105,9 @@ func main() {
 	service := service.NewOrderService(repository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(handler.RequestIDUnaryServerInterceptor()),
+	)
 	orderv1.RegisterOrderServiceServer(server, grpcHandler)
 
 	reflection.Register(server)
