@@ -57,7 +57,9 @@ func main() {
 	service := service.NewPaymentService(repository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(handler.RequestIDUnaryServerInterceptor()),
+	)
 	paymentv1.RegisterPaymentServiceServer(server, grpcHandler)
 
 	reflection.Register(server)

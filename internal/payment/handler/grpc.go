@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/gateway/requestid"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/service"
 	"google.golang.org/grpc/codes"
@@ -41,6 +42,7 @@ func (h *GRPCHandler) CreatePayment(ctx context.Context, req *paymentv1.CreatePa
 	h.logger.InfoContext(
 		ctx,
 		"payment created",
+		requestIDAttr(ctx),
 		slog.String("payment_id", payment.ID),
 		slog.String("order_id", payment.OrderID),
 		slog.String("customer_id", payment.CustomerID),
@@ -72,6 +74,7 @@ func (h *GRPCHandler) CancelPayment(ctx context.Context, req *paymentv1.CancelPa
 	h.logger.InfoContext(
 		ctx,
 		"payment cancelled",
+		requestIDAttr(ctx),
 		slog.String("payment_id", payment.ID),
 		slog.String("order_id", payment.OrderID),
 		slog.String("reason", payment.CancelReason),
@@ -127,4 +130,8 @@ func mapPaymentError(err error) error {
 	default:
 		return status.Error(codes.Internal, "internal server error")
 	}
+}
+
+func requestIDAttr(ctx context.Context) slog.Attr {
+	return slog.String("request_id", requestid.FromContext(ctx))
 }
