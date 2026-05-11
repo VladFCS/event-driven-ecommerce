@@ -14,6 +14,7 @@ import (
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/service"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/grpcmiddleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -106,7 +107,7 @@ func main() {
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(handler.RequestIDUnaryServerInterceptor()),
+		grpc.UnaryInterceptor(grpcmiddleware.RequestIDUnaryServerInterceptor()),
 	)
 	orderv1.RegisterOrderServiceServer(server, grpcHandler)
 

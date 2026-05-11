@@ -14,6 +14,7 @@ import (
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/service"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/grpcmiddleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -58,7 +59,7 @@ func main() {
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(handler.RequestIDUnaryServerInterceptor()),
+		grpc.UnaryInterceptor(grpcmiddleware.RequestIDUnaryServerInterceptor()),
 	)
 	paymentv1.RegisterPaymentServiceServer(server, grpcHandler)
 
