@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	catalogclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/catalog"
 	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
 	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
 	paymentclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/payment"
@@ -22,9 +23,17 @@ import (
 func main() {
 	logger := newLogger("gateway-service")
 	httpPort := getenv("HTTP_PORT", "8080")
+	catalogServiceAddr := getenv("CATALOG_SERVICE_ADDR", "localhost:50051")
 	orderServiceAddr := getenv("ORDER_SERVICE_ADDR", "localhost:50054")
 	inventoryServiceAddr := getenv("INVENTORY_SERVICE_ADDR", "localhost:50052")
 	paymentServiceAddr := getenv("PAYMENT_SERVICE_ADDR", "localhost:50053")
+
+	catalogConn, err := grpc.Dial(catalogServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Error("failed to connect to catalog-service", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer catalogConn.Close()
 
 	orderConn, err := grpc.Dial(orderServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -47,11 +56,13 @@ func main() {
 	}
 	defer paymentConn.Close()
 
+	catalogSvcClient := catalogclient.NewClient(catalogConn)
 	orderSvcClient := orderclient.NewClient(orderConn)
 	inventorySvcClient := inventoryclient.NewClient(inventoryConn)
 	paymentSvcClient := paymentclient.NewClient(paymentConn)
 	gatewaySvc := gatewayservice.NewGatewayService(
 		orderSvcClient,
+		gatewayservice.WithCatalogClient(catalogSvcClient),
 		gatewayservice.WithInventoryClient(inventorySvcClient),
 		gatewayservice.WithPaymentClient(paymentSvcClient),
 	)
@@ -71,7 +82,14 @@ func main() {
 	defer stop()
 
 	go func() {
-		logger.Info("gateway-service started", slog.String("http_port", httpPort), slog.String("order_service_addr", orderServiceAddr))
+		logger.Info(
+			"gateway-service started",
+			slog.String("http_port", httpPort),
+			slog.String("catalog_service_addr", catalogServiceAddr),
+			slog.String("order_service_addr", orderServiceAddr),
+			slog.String("inventory_service_addr", inventoryServiceAddr),
+			slog.String("payment_service_addr", paymentServiceAddr),
+		)
 		if serveErr := server.ListenAndServe(); serveErr != nil && serveErr != http.ErrServerClosed {
 			logger.Error("http server stopped with error", slog.Any("error", serveErr))
 			stop()

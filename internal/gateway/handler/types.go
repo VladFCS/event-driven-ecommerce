@@ -129,3 +129,15 @@ type GetPaymentByIDResponse struct {
 	Amount        MoneyResponse `json:"amount"`
 	PaymentMethod string        `json:"payment_method"`
 }
+
+type GetProductByIDURIRequest struct {
+	ProductID string `uri:"product_id" binding:"required"`
+}
+
+type GetProductByIDResponse struct {
+	ProductID   string `json:"product_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents"`
+	Currency    string `json:"currency"`
+}
