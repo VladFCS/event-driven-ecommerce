@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
@@ -39,6 +40,9 @@ type GatewayService struct {
 	checkoutTimeout     time.Duration
 	readTimeout         time.Duration
 	compensationTimeout time.Duration
+
+	cancelIdempotencyMu sync.Mutex
+	cancelIdempotency   map[string]*cancelIdempotencyRecord
 }
 
 type Option func(*GatewayService)
@@ -85,6 +89,7 @@ func NewGatewayService(orderClient OrderClient, opts ...Option) *GatewayService 
 		checkoutTimeout:     defaultCheckoutTimeout,
 		readTimeout:         defaultReadTimeout,
 		compensationTimeout: defaultCompensationTimeout,
+		cancelIdempotency:   make(map[string]*cancelIdempotencyRecord),
 	}
 
 	for _, opt := range opts {

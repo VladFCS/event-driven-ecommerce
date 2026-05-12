@@ -48,8 +48,9 @@ type GetOrderByIDInput struct {
 }
 
 type CancelOrderInput struct {
-	OrderID string
-	Reason  string
+	OrderID        string
+	Reason         string
+	IdempotencyKey string
 }
 
 type CancelOrderResult struct {

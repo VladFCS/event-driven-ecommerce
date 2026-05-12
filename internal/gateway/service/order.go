@@ -65,6 +65,32 @@ func (s *GatewayService) CancelOrder(ctx context.Context, in *CancelOrderInput) 
 		return nil, fmt.Errorf("%w: cancel reason is required", ErrInvalidInput)
 	}
 
+	idempotencyKey := strings.TrimSpace(in.IdempotencyKey)
+	if idempotencyKey == "" {
+		return s.performCancelOrder(ctx, orderID, reason)
+	}
+
+	record, existing, err := s.beginCancelIdempotency(idempotencyKey, cancelRequestFingerprint(orderID, reason))
+	if err != nil {
+		return nil, err
+	}
+	if existing {
+		<-record.done
+		if record.result != nil {
+			resultCopy := *record.result
+			return &resultCopy, nil
+		}
+
+		return nil, record.err
+	}
+
+	result, err := s.performCancelOrder(ctx, orderID, reason)
+	s.finishCancelIdempotency(idempotencyKey, record, result, err)
+
+	return result, err
+}
+
+func (s *GatewayService) performCancelOrder(ctx context.Context, orderID, reason string) (*CancelOrderResult, error) {
 	opCtx := ctx
 	cancel := func() {}
 	if s.checkoutTimeout > 0 {

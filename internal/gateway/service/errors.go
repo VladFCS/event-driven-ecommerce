@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrInvalidInput             = errors.New("invalid input")
+	ErrIdempotencyConflict      = errors.New("idempotency key conflict")
 	ErrUnsupportedCurrency      = errors.New("unsupported currency")
 	ErrUnsupportedPaymentMethod = errors.New("unsupported payment method")
 	ErrDownstreamNotFound       = errors.New("downstream resource not found")

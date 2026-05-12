@@ -31,6 +31,7 @@ func statusCodeForError(err error) int {
 	case errors.Is(err, gatewayservice.ErrRequestCanceled):
 		statusCode = http.StatusRequestTimeout
 	case errors.Is(err, gatewayservice.ErrInvalidInput),
+		errors.Is(err, gatewayservice.ErrIdempotencyConflict),
 		errors.Is(err, gatewayservice.ErrUnsupportedCurrency),
 		errors.Is(err, gatewayservice.ErrUnsupportedPaymentMethod):
 		statusCode = http.StatusBadRequest
@@ -38,6 +39,10 @@ func statusCodeForError(err error) int {
 		statusCode = http.StatusNotFound
 	case errors.Is(err, gatewayservice.ErrDownstreamFailed):
 		statusCode = http.StatusBadGateway
+	}
+
+	if errors.Is(err, gatewayservice.ErrIdempotencyConflict) {
+		statusCode = http.StatusConflict
 	}
 
 	return statusCode

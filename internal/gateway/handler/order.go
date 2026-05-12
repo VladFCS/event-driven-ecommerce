@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	defaultOrderListPage     = 1
-	defaultOrderListPageSize = 20
-	maxOrderListPageSize     = 100
+	cancelOrderIdempotencyKeyHeader = "X-Idempotency-Key"
+	defaultOrderListPage            = 1
+	defaultOrderListPageSize        = 20
+	maxOrderListPageSize            = 100
 )
 
 func (h *HTTPHandler) GetOrderByID(c *gin.Context) {
@@ -45,8 +46,9 @@ func (h *HTTPHandler) CancelOrder(c *gin.Context) {
 	}
 
 	resp, err := h.gatewayService.CancelOrder(c.Request.Context(), &gatewayservice.CancelOrderInput{
-		OrderID: uriReq.OrderID,
-		Reason:  bodyReq.Reason,
+		OrderID:        uriReq.OrderID,
+		Reason:         bodyReq.Reason,
+		IdempotencyKey: c.GetHeader(cancelOrderIdempotencyKeyHeader),
 	})
 	if err != nil {
 		writeError(c, err)
