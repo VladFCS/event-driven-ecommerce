@@ -57,3 +57,16 @@ type GetOrderByIDResult struct {
 	CreatedAt       string
 	UpdatedAt       string
 }
+
+type GetPaymentByIDInput struct {
+	PaymentID string
+}
+
+type GetPaymentByIDResult struct {
+	PaymentID     string
+	OrderID       string
+	CustomerID    string
+	Status        string
+	Amount        Money
+	PaymentMethod string
+}
