@@ -127,9 +127,9 @@ roadmap.md        next implementation steps
 - request ID propagation across HTTP and gRPC
 - in-memory repositories for fast local development
 
-## What Is Missing
+## Future Techs
 
-To fully match the project name, the app still needs:
+Planned next-step technologies and architecture improvements:
 - Kafka-based event flow
 - asynchronous business processing
 - PostgreSQL, MongoDB, and Redis runtime integration
