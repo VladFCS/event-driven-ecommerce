@@ -10,7 +10,7 @@ import (
 func (h *HTTPHandler) Checkout(c *gin.Context) {
 	var req CheckoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, req, "invalid request body")
 		return
 	}
 

@@ -10,7 +10,7 @@ import (
 func (h *HTTPHandler) GetPaymentByID(c *gin.Context) {
 	var req GetPaymentByIDURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, req, "invalid request path parameters")
 		return
 	}
 

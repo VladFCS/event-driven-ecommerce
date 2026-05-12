@@ -17,7 +17,7 @@ const (
 func (h *HTTPHandler) GetOrderByID(c *gin.Context) {
 	var req GetOrderByIDRequest
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, req, "invalid request path parameters")
 		return
 	}
 
@@ -35,13 +35,13 @@ func (h *HTTPHandler) GetOrderByID(c *gin.Context) {
 func (h *HTTPHandler) CancelOrder(c *gin.Context) {
 	var uriReq CancelOrderURIRequest
 	if err := c.ShouldBindUri(&uriReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, uriReq, "invalid request path parameters")
 		return
 	}
 
 	var bodyReq CancelOrderRequest
 	if err := c.ShouldBindJSON(&bodyReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, bodyReq, "invalid request body")
 		return
 	}
 
@@ -61,13 +61,13 @@ func (h *HTTPHandler) CancelOrder(c *gin.Context) {
 func (h *HTTPHandler) ListOrdersByCustomer(c *gin.Context) {
 	var uriReq ListOrdersByCustomerURIRequest
 	if err := c.ShouldBindUri(&uriReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, uriReq, "invalid request path parameters")
 		return
 	}
 
 	var queryReq ListOrdersByCustomerQueryRequest
 	if err := c.ShouldBindQuery(&queryReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		writeBindError(c, err, queryReq, "invalid query parameters")
 		return
 	}
 
