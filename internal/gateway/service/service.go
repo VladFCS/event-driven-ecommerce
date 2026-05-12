@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	catalogclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/catalog"
 	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
 	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
 	paymentclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/payment"
@@ -27,6 +28,10 @@ type PaymentClient interface {
 	GetPaymentByID(ctx context.Context, req *paymentclient.GetPaymentByIDRequest) (*paymentclient.GetPaymentByIDResponse, error)
 }
 
+type CatalogClient interface {
+	GetProductByID(ctx context.Context, productID string) (*catalogclient.GetProductByIDResponse, error)
+}
+
 type ReadinessStatus struct {
 	Ready               bool
 	MissingDependencies []string
@@ -36,6 +41,7 @@ type GatewayService struct {
 	orderClient     OrderClient
 	inventoryClient InventoryClient
 	paymentClient   PaymentClient
+	catalogClient   CatalogClient
 
 	checkoutTimeout     time.Duration
 	readTimeout         time.Duration
@@ -62,6 +68,12 @@ func WithInventoryClient(client InventoryClient) Option {
 func WithPaymentClient(client PaymentClient) Option {
 	return func(s *GatewayService) {
 		s.paymentClient = client
+	}
+}
+
+func WithCatalogClient(client CatalogClient) Option {
+	return func(s *GatewayService) {
+		s.catalogClient = client
 	}
 }
 
@@ -109,7 +121,7 @@ func (s *GatewayService) ReadinessStatus() ReadinessStatus {
 		}
 	}
 
-	missingDependencies := make([]string, 0, 3)
+	missingDependencies := make([]string, 0, 4)
 	if s.orderClient == nil {
 		missingDependencies = append(missingDependencies, "order_client")
 	}
@@ -118,6 +130,9 @@ func (s *GatewayService) ReadinessStatus() ReadinessStatus {
 	}
 	if s.paymentClient == nil {
 		missingDependencies = append(missingDependencies, "payment_client")
+	}
+	if s.catalogClient == nil {
+		missingDependencies = append(missingDependencies, "catalog_client")
 	}
 
 	return ReadinessStatus{

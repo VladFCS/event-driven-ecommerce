@@ -83,6 +83,7 @@ type GetPaymentByIDResult struct {
 	Amount        Money
 	PaymentMethod string
 }
+
 type ListOrdersByCustomerInput struct {
 	CustomerID string
 	Page       int
@@ -94,4 +95,16 @@ type ListOrdersByCustomerResult struct {
 	Total    int64
 	Page     int
 	PageSize int
+}
+
+type GetProductByIDInput struct {
+	ProductID string
+}
+
+type GetProductByIDResult struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
 }
