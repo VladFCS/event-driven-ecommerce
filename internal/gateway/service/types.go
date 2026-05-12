@@ -70,3 +70,15 @@ type GetPaymentByIDResult struct {
 	Amount        Money
 	PaymentMethod string
 }
+type ListOrdersByCustomerInput struct {
+	CustomerID string
+	Page       int
+	PageSize   int
+}
+
+type ListOrdersByCustomerResult struct {
+	Orders   []GetOrderByIDResult
+	Total    int64
+	Page     int
+	PageSize int
+}

@@ -18,6 +18,15 @@ type GetOrderByIDRequest struct {
 	OrderID string `uri:"order_id" binding:"required"`
 }
 
+type ListOrdersByCustomerURIRequest struct {
+	CustomerID string `uri:"customer_id" binding:"required"`
+}
+
+type ListOrdersByCustomerQueryRequest struct {
+	Page     int `form:"page"`
+	PageSize int `form:"page_size"`
+}
+
 type GetOrderByIDResponse struct {
 	OrderID         string              `json:"order_id"`
 	CustomerID      string              `json:"customer_id"`
@@ -27,6 +36,13 @@ type GetOrderByIDResponse struct {
 	ShippingAddress AddressResponse     `json:"shipping_address"`
 	CreatedAt       string              `json:"created_at"`
 	UpdatedAt       string              `json:"updated_at"`
+}
+
+type ListOrdersByCustomerResponse struct {
+	Orders   []GetOrderByIDResponse `json:"orders"`
+	Total    int64                  `json:"total"`
+	Page     int                    `json:"page"`
+	PageSize int                    `json:"page_size"`
 }
 
 type CheckoutItemRequest struct {

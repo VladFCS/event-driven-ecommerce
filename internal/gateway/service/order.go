@@ -4,7 +4,51 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
 )
+
+func (s *GatewayService) ListOrdersByCustomer(ctx context.Context, in *ListOrdersByCustomerInput) (*ListOrdersByCustomerResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: list orders request is nil", ErrInvalidInput)
+	}
+	customerID := strings.TrimSpace(in.CustomerID)
+	if customerID == "" {
+		return nil, fmt.Errorf("%w: customer id is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.readTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.readTimeout)
+	}
+	defer cancel()
+
+	resp, err := s.orderClient.ListOrdersByCustomer(opCtx, &orderclient.ListOrdersByCustomerRequest{
+		CustomerID: customerID,
+		Page:       in.Page,
+		PageSize:   in.PageSize,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("order list by customer", err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("%w: list orders response is empty", ErrDownstreamFailed)
+	}
+
+	result := &ListOrdersByCustomerResult{
+		Orders:   make([]GetOrderByIDResult, 0, len(resp.Orders)),
+		Total:    resp.Total,
+		Page:     resp.Page,
+		PageSize: resp.PageSize,
+	}
+
+	for _, order := range resp.Orders {
+		result.Orders = append(result.Orders, mapClientOrderToResult(order))
+	}
+
+	return result, nil
+}
 
 func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput) (*GetOrderByIDResult, error) {
 	if in == nil {
@@ -29,8 +73,12 @@ func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput
 		return nil, fmt.Errorf("%w: order response is empty", ErrDownstreamFailed)
 	}
 
-	order := resp.Order
-	result := &GetOrderByIDResult{
+	result := mapClientOrderToResult(*resp.Order)
+	return &result, nil
+}
+
+func mapClientOrderToResult(order orderclient.Order) GetOrderByIDResult {
+	result := GetOrderByIDResult{
 		OrderID:         order.ID,
 		CustomerID:      order.CustomerID,
 		OrderStatus:     order.Status,
@@ -52,5 +100,5 @@ func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput
 		})
 	}
 
-	return result, nil
+	return result
 }

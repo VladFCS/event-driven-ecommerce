@@ -13,6 +13,7 @@ type OrderClient interface {
 	CreateOrder(ctx context.Context, req *orderclient.CreateOrderRequest) (*orderclient.CreateOrderResponse, error)
 	GetOrderByID(ctx context.Context, orderID string) (*orderclient.GetOrderByIDResponse, error)
 	CancelOrder(ctx context.Context, req *orderclient.CancelOrderRequest) (*orderclient.CancelOrderResponse, error)
+	ListOrdersByCustomer(ctx context.Context, req *orderclient.ListOrdersByCustomerRequest) (*orderclient.ListOrdersByCustomerResponse, error)
 }
 
 type InventoryClient interface {
