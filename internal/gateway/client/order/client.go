@@ -11,6 +11,15 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	ErrCreateOrderRequestNil    = errors.New("create order request is nil")
+	ErrCancelOrderRequestNil    = errors.New("cancel order request is nil")
+	ErrListOrdersRequestNil     = errors.New("list orders by customer request is nil")
+	ErrOrderIDRequired          = errors.New("order id is required")
+	ErrCustomerIDRequired       = errors.New("customer id is required")
+	ErrUnsupportedOrderCurrency = errors.New("unsupported order currency")
+)
+
 type Client interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
 	CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error)
@@ -109,7 +118,7 @@ func NewClient(conn grpc.ClientConnInterface) *GRPCClient {
 
 func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
 	if req == nil {
-		return nil, errors.New("create order request is nil")
+		return nil, ErrCreateOrderRequestNil
 	}
 
 	items, err := mapCreateOrderItemsToProto(req.Items)
@@ -134,7 +143,7 @@ func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 
 func (c *GRPCClient) GetOrderByID(ctx context.Context, orderID string) (*GetOrderByIDResponse, error) {
 	if strings.TrimSpace(orderID) == "" {
-		return nil, errors.New("order id is required")
+		return nil, ErrOrderIDRequired
 	}
 
 	grpcResp, err := c.grpcClient.GetOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.GetOrderRequest{
@@ -151,10 +160,10 @@ func (c *GRPCClient) GetOrderByID(ctx context.Context, orderID string) (*GetOrde
 
 func (c *GRPCClient) ListOrdersByCustomer(ctx context.Context, req *ListOrdersByCustomerRequest) (*ListOrdersByCustomerResponse, error) {
 	if req == nil {
-		return nil, errors.New("list orders by customer request is nil")
+		return nil, ErrListOrdersRequestNil
 	}
 	if strings.TrimSpace(req.CustomerID) == "" {
-		return nil, errors.New("customer id is required")
+		return nil, ErrCustomerIDRequired
 	}
 
 	grpcResp, err := c.grpcClient.ListOrdersByCustomer(requestid.WithOutgoingMetadata(ctx), &orderv1.ListOrdersByCustomerRequest{
@@ -176,7 +185,7 @@ func (c *GRPCClient) ListOrdersByCustomer(ctx context.Context, req *ListOrdersBy
 
 func (c *GRPCClient) CancelOrder(ctx context.Context, req *CancelOrderRequest) (*CancelOrderResponse, error) {
 	if req == nil {
-		return nil, errors.New("cancel order request is nil")
+		return nil, ErrCancelOrderRequestNil
 	}
 
 	grpcResp, err := c.grpcClient.CancelOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.CancelOrderRequest{
@@ -316,6 +325,6 @@ func parseCurrency(value string) (orderv1.Currency, error) {
 	case "EUR", "CURRENCY_EUR":
 		return orderv1.Currency_CURRENCY_EUR, nil
 	default:
-		return orderv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("unsupported order currency: %q", value)
+		return orderv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedOrderCurrency, value)
 	}
 }

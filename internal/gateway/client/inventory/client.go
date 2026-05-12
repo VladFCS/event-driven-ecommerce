@@ -9,6 +9,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	ErrReserveStockRequestNil = errors.New("reserve stock request is nil")
+	ErrReleaseStockRequestNil = errors.New("release stock request is nil")
+)
+
 type Stock struct {
 	ProductID         string
 	AvailableQuantity int64
@@ -48,7 +53,7 @@ func NewClient(conn grpc.ClientConnInterface) *GRPCClient {
 
 func (c *GRPCClient) ReserveStock(ctx context.Context, req *ReserveStockRequest) (*ReserveStockResponse, error) {
 	if req == nil {
-		return nil, errors.New("reserve stock request is nil")
+		return nil, ErrReserveStockRequestNil
 	}
 
 	grpcResp, err := c.grpcClient.ReserveStock(requestid.WithOutgoingMetadata(ctx), &inventoryv1.ReserveStockRequest{
@@ -67,7 +72,7 @@ func (c *GRPCClient) ReserveStock(ctx context.Context, req *ReserveStockRequest)
 
 func (c *GRPCClient) ReleaseStock(ctx context.Context, req *ReleaseStockRequest) (*ReleaseStockResponse, error) {
 	if req == nil {
-		return nil, errors.New("release stock request is nil")
+		return nil, ErrReleaseStockRequestNil
 	}
 
 	grpcResp, err := c.grpcClient.ReleaseStock(requestid.WithOutgoingMetadata(ctx), &inventoryv1.ReleaseStockRequest{

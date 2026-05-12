@@ -11,6 +11,14 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	ErrCreatePaymentRequestNil    = errors.New("create payment request is nil")
+	ErrGetPaymentRequestNil       = errors.New("get payment request is nil")
+	ErrPaymentIDRequired          = errors.New("payment id is required")
+	ErrUnsupportedPaymentCurrency = errors.New("unsupported payment currency")
+	ErrUnsupportedPaymentMethod   = errors.New("unsupported payment method")
+)
+
 type Money struct {
 	Currency    string
 	AmountCents int64
@@ -58,7 +66,7 @@ func NewClient(conn grpc.ClientConnInterface) *GRPCClient {
 
 func (c *GRPCClient) CreatePayment(ctx context.Context, req *CreatePaymentRequest) (*CreatePaymentResponse, error) {
 	if req == nil {
-		return nil, errors.New("create payment request is nil")
+		return nil, ErrCreatePaymentRequestNil
 	}
 
 	amount, err := mapMoneyToProto(req.Amount)
@@ -90,10 +98,10 @@ func (c *GRPCClient) CreatePayment(ctx context.Context, req *CreatePaymentReques
 
 func (c *GRPCClient) GetPaymentByID(ctx context.Context, req *GetPaymentByIDRequest) (*GetPaymentByIDResponse, error) {
 	if req == nil {
-		return nil, errors.New("get payment request is nil")
+		return nil, ErrGetPaymentRequestNil
 	}
 	if strings.TrimSpace(req.PaymentID) == "" {
-		return nil, errors.New("payment id is required")
+		return nil, ErrPaymentIDRequired
 	}
 
 	grpcResp, err := c.grpcClient.GetPayment(requestid.WithOutgoingMetadata(ctx), &paymentv1.GetPaymentRequest{
@@ -153,7 +161,7 @@ func parseCurrency(value string) (paymentv1.Currency, error) {
 	case "EUR", "CURRENCY_EUR":
 		return paymentv1.Currency_CURRENCY_EUR, nil
 	default:
-		return paymentv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("unsupported payment currency: %q", value)
+		return paymentv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedPaymentCurrency, value)
 	}
 }
 
@@ -164,6 +172,6 @@ func parsePaymentMethod(value string) (paymentv1.PaymentMethodType, error) {
 	case "CASH", "PAYMENT_METHOD_TYPE_CASH":
 		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CASH, nil
 	default:
-		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, fmt.Errorf("unsupported payment method: %q", value)
+		return paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedPaymentMethod, value)
 	}
 }
