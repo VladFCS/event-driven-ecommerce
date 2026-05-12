@@ -31,6 +31,31 @@ func (h *HTTPHandler) GetOrderByID(c *gin.Context) {
 	c.JSON(http.StatusOK, toGetOrderByIDResponse(resp))
 }
 
+func (h *HTTPHandler) CancelOrder(c *gin.Context) {
+	var uriReq CancelOrderURIRequest
+	if err := c.ShouldBindUri(&uriReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var bodyReq CancelOrderRequest
+	if err := c.ShouldBindJSON(&bodyReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.gatewayService.CancelOrder(c.Request.Context(), &gatewayservice.CancelOrderInput{
+		OrderID: uriReq.OrderID,
+		Reason:  bodyReq.Reason,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toCancelOrderResponse(resp))
+}
+
 func (h *HTTPHandler) ListOrdersByCustomer(c *gin.Context) {
 	var uriReq ListOrdersByCustomerURIRequest
 	if err := c.ShouldBindUri(&uriReq); err != nil {
@@ -94,6 +119,15 @@ func toGetOrderByIDResponse(result *gatewayservice.GetOrderByIDResult) *GetOrder
 	}
 
 	return response
+}
+
+func toCancelOrderResponse(result *gatewayservice.CancelOrderResult) *CancelOrderResponse {
+	return &CancelOrderResponse{
+		OrderID:     result.OrderID,
+		CustomerID:  result.CustomerID,
+		OrderStatus: result.OrderStatus,
+		UpdatedAt:   result.UpdatedAt,
+	}
 }
 
 func toListOrdersByCustomerResponse(result *gatewayservice.ListOrdersByCustomerResult) *ListOrdersByCustomerResponse {

@@ -47,6 +47,18 @@ type GetOrderByIDInput struct {
 	OrderID string
 }
 
+type CancelOrderInput struct {
+	OrderID string
+	Reason  string
+}
+
+type CancelOrderResult struct {
+	OrderID     string
+	CustomerID  string
+	OrderStatus string
+	UpdatedAt   string
+}
+
 type GetOrderByIDResult struct {
 	OrderID         string
 	CustomerID      string

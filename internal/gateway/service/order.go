@@ -50,6 +50,47 @@ func (s *GatewayService) ListOrdersByCustomer(ctx context.Context, in *ListOrder
 	return result, nil
 }
 
+func (s *GatewayService) CancelOrder(ctx context.Context, in *CancelOrderInput) (*CancelOrderResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: cancel order request is nil", ErrInvalidInput)
+	}
+
+	orderID := strings.TrimSpace(in.OrderID)
+	if orderID == "" {
+		return nil, fmt.Errorf("%w: order id is required", ErrInvalidInput)
+	}
+
+	reason := strings.TrimSpace(in.Reason)
+	if reason == "" {
+		return nil, fmt.Errorf("%w: cancel reason is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.checkoutTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.checkoutTimeout)
+	}
+	defer cancel()
+
+	resp, err := s.orderClient.CancelOrder(opCtx, &orderclient.CancelOrderRequest{
+		OrderID: orderID,
+		Reason:  reason,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("order cancel", err)
+	}
+	if resp == nil || resp.Order == nil {
+		return nil, fmt.Errorf("%w: cancel order response is empty", ErrDownstreamFailed)
+	}
+
+	return &CancelOrderResult{
+		OrderID:     resp.Order.ID,
+		CustomerID:  resp.Order.CustomerID,
+		OrderStatus: resp.Order.Status,
+		UpdatedAt:   resp.Order.UpdatedAt,
+	}, nil
+}
+
 func (s *GatewayService) GetOrderByID(ctx context.Context, in *GetOrderByIDInput) (*GetOrderByIDResult, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: get order request is nil", ErrInvalidInput)

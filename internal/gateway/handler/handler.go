@@ -9,6 +9,7 @@ import (
 
 type CheckoutService interface {
 	Checkout(ctx context.Context, in *gatewayservice.CheckoutInput) (*gatewayservice.CheckoutResult, error)
+	CancelOrder(ctx context.Context, in *gatewayservice.CancelOrderInput) (*gatewayservice.CancelOrderResult, error)
 	GetOrderByID(ctx context.Context, in *gatewayservice.GetOrderByIDInput) (*gatewayservice.GetOrderByIDResult, error)
 	ListOrdersByCustomer(ctx context.Context, in *gatewayservice.ListOrdersByCustomerInput) (*gatewayservice.ListOrdersByCustomerResult, error)
 	ReadinessStatus() gatewayservice.ReadinessStatus
@@ -29,6 +30,7 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.GET("/readyz", h.Readyz)
 
 	r.POST("/checkout", h.Checkout)
+	r.POST("/orders/:order_id/cancel", h.CancelOrder)
 	r.GET("/orders/:order_id", h.GetOrderByID)
 	r.GET("/customers/:customer_id/orders", h.ListOrdersByCustomer)
 }

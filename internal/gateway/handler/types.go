@@ -18,6 +18,14 @@ type GetOrderByIDRequest struct {
 	OrderID string `uri:"order_id" binding:"required"`
 }
 
+type CancelOrderURIRequest struct {
+	OrderID string `uri:"order_id" binding:"required"`
+}
+
+type CancelOrderRequest struct {
+	Reason string `json:"reason" binding:"required"`
+}
+
 type ListOrdersByCustomerURIRequest struct {
 	CustomerID string `uri:"customer_id" binding:"required"`
 }
@@ -36,6 +44,13 @@ type GetOrderByIDResponse struct {
 	ShippingAddress AddressResponse     `json:"shipping_address"`
 	CreatedAt       string              `json:"created_at"`
 	UpdatedAt       string              `json:"updated_at"`
+}
+
+type CancelOrderResponse struct {
+	OrderID     string `json:"order_id"`
+	CustomerID  string `json:"customer_id"`
+	OrderStatus string `json:"order_status"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type ListOrdersByCustomerResponse struct {
