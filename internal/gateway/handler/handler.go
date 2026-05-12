@@ -7,7 +7,7 @@ import (
 	gatewayservice "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/service"
 )
 
-type CheckoutService interface {
+type GatewayService interface {
 	Checkout(ctx context.Context, in *gatewayservice.CheckoutInput) (*gatewayservice.CheckoutResult, error)
 	CancelOrder(ctx context.Context, in *gatewayservice.CancelOrderInput) (*gatewayservice.CancelOrderResult, error)
 	GetOrderByID(ctx context.Context, in *gatewayservice.GetOrderByIDInput) (*gatewayservice.GetOrderByIDResult, error)
@@ -16,10 +16,10 @@ type CheckoutService interface {
 }
 
 type HTTPHandler struct {
-	gatewayService CheckoutService
+	gatewayService GatewayService
 }
 
-func NewHTTPHandler(gatewayService CheckoutService) *HTTPHandler {
+func NewHTTPHandler(gatewayService GatewayService) *HTTPHandler {
 	return &HTTPHandler{gatewayService: gatewayService}
 }
 

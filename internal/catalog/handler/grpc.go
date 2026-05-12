@@ -25,7 +25,7 @@ func NewGRPCHandler(service *service.CatalogService, logger *slog.Logger) *GRPCH
 	}
 }
 
-func (h *GRPCHandler) GetProduct(ctx context.Context, req *catalogv1.GetProductRequest) (*catalogv1.GetProductResponse, error) {
+func (h *GRPCHandler) GetProductByID(ctx context.Context, req *catalogv1.GetProductByIDRequest) (*catalogv1.GetProductByIDResponse, error) {
 	product, err := h.service.GetProductByID(ctx, req.GetProductId())
 	if err != nil {
 		return nil, mapCatalogError(err)
@@ -39,7 +39,7 @@ func (h *GRPCHandler) GetProduct(ctx context.Context, req *catalogv1.GetProductR
 		Currency:    product.Currency,
 	}
 
-	return &catalogv1.GetProductResponse{
+	return &catalogv1.GetProductByIDResponse{
 		Product: res,
 	}, nil
 }

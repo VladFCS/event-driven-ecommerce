@@ -54,13 +54,13 @@ func (h *GRPCHandler) CreatePayment(ctx context.Context, req *paymentv1.CreatePa
 	}, nil
 }
 
-func (h *GRPCHandler) GetPayment(ctx context.Context, req *paymentv1.GetPaymentRequest) (*paymentv1.GetPaymentResponse, error) {
+func (h *GRPCHandler) GetPaymentByID(ctx context.Context, req *paymentv1.GetPaymentByIDRequest) (*paymentv1.GetPaymentByIDResponse, error) {
 	payment, err := h.service.GetPaymentByID(ctx, req.GetPaymentId())
 	if err != nil {
 		return nil, mapPaymentError(err)
 	}
 
-	return &paymentv1.GetPaymentResponse{
+	return &paymentv1.GetPaymentByIDResponse{
 		Payment: convertPaymentToProto(payment),
 	}, nil
 }

@@ -53,13 +53,13 @@ func (c *GRPCClient) CreatePayment(ctx context.Context, req *CreatePaymentReques
 
 func (c *GRPCClient) GetPaymentByID(ctx context.Context, req *GetPaymentByIDRequest) (*GetPaymentByIDResponse, error) {
 	if req == nil {
-		return nil, ErrGetPaymentRequestNil
+		return nil, ErrGetPaymentByIDRequestNil
 	}
 	if strings.TrimSpace(req.PaymentID) == "" {
 		return nil, ErrPaymentIDRequired
 	}
 
-	grpcResp, err := c.grpcClient.GetPayment(requestid.WithOutgoingMetadata(ctx), &paymentv1.GetPaymentRequest{
+	grpcResp, err := c.grpcClient.GetPaymentByID(requestid.WithOutgoingMetadata(ctx), &paymentv1.GetPaymentByIDRequest{
 		PaymentId: req.PaymentID,
 	})
 	if err != nil {

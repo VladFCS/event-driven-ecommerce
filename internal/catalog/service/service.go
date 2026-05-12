@@ -18,11 +18,11 @@ func NewCatalogService(repository repository.ProductRepository) *CatalogService 
 	}
 }
 
-func (s *CatalogService) GetProductByID(ctx context.Context, id string) (domain.Product, error) {
-	if strings.TrimSpace(id) == "" {
+func (s *CatalogService) GetProductByID(ctx context.Context, productID string) (domain.Product, error) {
+	if strings.TrimSpace(productID) == "" {
 		return domain.Product{}, domain.ErrInvalidProduct
 	}
-	return s.repository.GetProductByID(ctx, id)
+	return s.repository.GetProductByID(ctx, productID)
 }
 
 func (s *CatalogService) CreateProduct(ctx context.Context, product domain.Product) (domain.Product, error) {

@@ -26,13 +26,13 @@ func NewGRPCHandler(service *service.InventoryService, logger *slog.Logger) *GRP
 	}
 }
 
-func (h *GRPCHandler) GetStock(ctx context.Context, req *inventoryv1.GetStockRequest) (*inventoryv1.GetStockResponse, error) {
+func (h *GRPCHandler) GetStockByProductID(ctx context.Context, req *inventoryv1.GetStockByProductIDRequest) (*inventoryv1.GetStockByProductIDResponse, error) {
 	stock, err := h.service.GetStockByProductID(ctx, req.GetProductId())
 	if err != nil {
 		return nil, mapInventoryError(err)
 	}
 
-	return &inventoryv1.GetStockResponse{
+	return &inventoryv1.GetStockByProductIDResponse{
 		Stock: convertStockToProto(stock),
 	}, nil
 }

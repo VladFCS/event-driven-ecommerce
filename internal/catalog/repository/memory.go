@@ -8,7 +8,7 @@ import (
 )
 
 type MemoryRepository struct {
-	mu sync.RWMutex
+	mu      sync.RWMutex
 	product map[string]domain.Product
 }
 
@@ -22,11 +22,11 @@ func NewMemoryRepository(seed []domain.Product) *MemoryRepository {
 	}
 }
 
-func (r *MemoryRepository) GetProductByID(ctx context.Context, id string)	 (domain.Product, error) {
+func (r *MemoryRepository) GetProductByID(ctx context.Context, productID string) (domain.Product, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	product, ok := r.product[id]
+	product, ok := r.product[productID]
 	if !ok {
 		return domain.Product{}, domain.ErrProductNotFound
 	}
@@ -41,4 +41,3 @@ func (r *MemoryRepository) CreateProduct(ctx context.Context, product domain.Pro
 	r.product[product.ID] = product
 	return product, nil
 }
-

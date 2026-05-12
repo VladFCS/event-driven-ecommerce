@@ -56,7 +56,7 @@ func (c *GRPCClient) GetOrderByID(ctx context.Context, orderID string) (*GetOrde
 		return nil, ErrOrderIDRequired
 	}
 
-	grpcResp, err := c.grpcClient.GetOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.GetOrderRequest{
+	grpcResp, err := c.grpcClient.GetOrderByID(requestid.WithOutgoingMetadata(ctx), &orderv1.GetOrderByIDRequest{
 		OrderId: orderID,
 	})
 	if err != nil {

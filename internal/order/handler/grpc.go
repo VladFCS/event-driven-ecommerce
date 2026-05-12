@@ -51,13 +51,13 @@ func (h *GRPCHandler) CreateOrder(ctx context.Context, req *orderv1.CreateOrderR
 	}, nil
 }
 
-func (h *GRPCHandler) GetOrder(ctx context.Context, req *orderv1.GetOrderRequest) (*orderv1.GetOrderResponse, error) {
+func (h *GRPCHandler) GetOrderByID(ctx context.Context, req *orderv1.GetOrderByIDRequest) (*orderv1.GetOrderByIDResponse, error) {
 	order, err := h.service.GetOrderByID(ctx, req.GetOrderId())
 	if err != nil {
 		return nil, mapOrderError(err)
 	}
 
-	return &orderv1.GetOrderResponse{
+	return &orderv1.GetOrderByIDResponse{
 		Order: convertOrderToProto(order),
 	}, nil
 }
