@@ -5,7 +5,7 @@ package inventory.v1;
 option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1;inventoryv1";
 
 service InventoryService {
-  rpc GetStock(GetStockRequest) returns (GetStockResponse);
+  rpc GetStockByProductID(GetStockByProductIDRequest) returns (GetStockByProductIDResponse);
   rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
   rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
 }
@@ -37,10 +37,10 @@ message ReleaseStockResponse {
   Stock stock = 1;
 }
 
-message GetStockRequest {
+message GetStockByProductIDRequest {
   string product_id = 1;
 }
 
-message GetStockResponse {
+message GetStockByProductIDResponse {
   Stock stock = 1;
 }

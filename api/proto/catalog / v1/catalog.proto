@@ -5,7 +5,7 @@ package catalog.v1;
 option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1;catalogv1";
 
 service CatalogService {
-  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc GetProductByID(GetProductByIDRequest) returns (GetProductByIDResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
 }
 
@@ -23,11 +23,11 @@ message Product {
   Currency currency = 5;
 }
 
-message GetProductRequest {
+message GetProductByIDRequest {
   string product_id = 1;
 }
 
-message GetProductResponse {
+message GetProductByIDResponse {
   Product product = 1;
 }
 

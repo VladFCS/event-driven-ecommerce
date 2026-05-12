@@ -639,27 +639,27 @@ func (x *CreateOrderResponse) GetOrder() *Order {
 	return nil
 }
 
-type GetOrderRequest struct {
+type GetOrderByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetOrderRequest) Reset() {
-	*x = GetOrderRequest{}
+func (x *GetOrderByIDRequest) Reset() {
+	*x = GetOrderByIDRequest{}
 	mi := &file_order___v1_order_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetOrderRequest) String() string {
+func (x *GetOrderByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetOrderRequest) ProtoMessage() {}
+func (*GetOrderByIDRequest) ProtoMessage() {}
 
-func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
+func (x *GetOrderByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_order___v1_order_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -671,39 +671,39 @@ func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetOrderRequest.ProtoReflect.Descriptor instead.
-func (*GetOrderRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetOrderByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetOrderByIDRequest) Descriptor() ([]byte, []int) {
 	return file_order___v1_order_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetOrderRequest) GetOrderId() string {
+func (x *GetOrderByIDRequest) GetOrderId() string {
 	if x != nil {
 		return x.OrderId
 	}
 	return ""
 }
 
-type GetOrderResponse struct {
+type GetOrderByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetOrderResponse) Reset() {
-	*x = GetOrderResponse{}
+func (x *GetOrderByIDResponse) Reset() {
+	*x = GetOrderByIDResponse{}
 	mi := &file_order___v1_order_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetOrderResponse) String() string {
+func (x *GetOrderByIDResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetOrderResponse) ProtoMessage() {}
+func (*GetOrderByIDResponse) ProtoMessage() {}
 
-func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
+func (x *GetOrderByIDResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_order___v1_order_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -715,12 +715,12 @@ func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetOrderResponse.ProtoReflect.Descriptor instead.
-func (*GetOrderResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetOrderByIDResponse.ProtoReflect.Descriptor instead.
+func (*GetOrderByIDResponse) Descriptor() ([]byte, []int) {
 	return file_order___v1_order_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *GetOrderResponse) GetOrder() *Order {
+func (x *GetOrderByIDResponse) GetOrder() *Order {
 	if x != nil {
 		return x.Order
 	}
@@ -1004,10 +1004,10 @@ const file_order___v1_order_proto_rawDesc = "" +
 	"\x10shipping_address\x18\x03 \x01(\v2\x11.order.v1.AddressR\x0fshippingAddress\x12'\n" +
 	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"<\n" +
 	"\x13CreateOrderResponse\x12%\n" +
-	"\x05order\x18\x01 \x01(\v2\x0f.order.v1.OrderR\x05order\",\n" +
-	"\x0fGetOrderRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\tR\aorderId\"9\n" +
-	"\x10GetOrderResponse\x12%\n" +
+	"\x05order\x18\x01 \x01(\v2\x0f.order.v1.OrderR\x05order\"0\n" +
+	"\x13GetOrderByIDRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\"=\n" +
+	"\x14GetOrderByIDResponse\x12%\n" +
 	"\x05order\x18\x01 \x01(\v2\x0f.order.v1.OrderR\x05order\"G\n" +
 	"\x12CancelOrderRequest\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x16\n" +
@@ -1035,10 +1035,10 @@ const file_order___v1_order_proto_rawDesc = "" +
 	"\bCurrency\x12\x18\n" +
 	"\x14CURRENCY_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fCURRENCY_USD\x10\x01\x12\x10\n" +
-	"\fCURRENCY_EUR\x10\x022\xd0\x02\n" +
+	"\fCURRENCY_EUR\x10\x022\xdc\x02\n" +
 	"\fOrderService\x12J\n" +
-	"\vCreateOrder\x12\x1c.order.v1.CreateOrderRequest\x1a\x1d.order.v1.CreateOrderResponse\x12A\n" +
-	"\bGetOrder\x12\x19.order.v1.GetOrderRequest\x1a\x1a.order.v1.GetOrderResponse\x12J\n" +
+	"\vCreateOrder\x12\x1c.order.v1.CreateOrderRequest\x1a\x1d.order.v1.CreateOrderResponse\x12M\n" +
+	"\fGetOrderByID\x12\x1d.order.v1.GetOrderByIDRequest\x1a\x1e.order.v1.GetOrderByIDResponse\x12J\n" +
 	"\vCancelOrder\x12\x1c.order.v1.CancelOrderRequest\x1a\x1d.order.v1.CancelOrderResponse\x12e\n" +
 	"\x14ListOrdersByCustomer\x12%.order.v1.ListOrdersByCustomerRequest\x1a&.order.v1.ListOrdersByCustomerResponseBCZAgithub.com/vladfc/event-driven-ecommerce-app/gen/order/v1;orderv1b\x06proto3"
 
@@ -1066,8 +1066,8 @@ var file_order___v1_order_proto_goTypes = []any{
 	(*Order)(nil),                        // 6: order.v1.Order
 	(*CreateOrderRequest)(nil),           // 7: order.v1.CreateOrderRequest
 	(*CreateOrderResponse)(nil),          // 8: order.v1.CreateOrderResponse
-	(*GetOrderRequest)(nil),              // 9: order.v1.GetOrderRequest
-	(*GetOrderResponse)(nil),             // 10: order.v1.GetOrderResponse
+	(*GetOrderByIDRequest)(nil),          // 9: order.v1.GetOrderByIDRequest
+	(*GetOrderByIDResponse)(nil),         // 10: order.v1.GetOrderByIDResponse
 	(*CancelOrderRequest)(nil),           // 11: order.v1.CancelOrderRequest
 	(*CancelOrderResponse)(nil),          // 12: order.v1.CancelOrderResponse
 	(*ListOrdersByCustomerRequest)(nil),  // 13: order.v1.ListOrdersByCustomerRequest
@@ -1085,15 +1085,15 @@ var file_order___v1_order_proto_depIdxs = []int32{
 	4,  // 8: order.v1.CreateOrderRequest.items:type_name -> order.v1.CreateOrderItem
 	5,  // 9: order.v1.CreateOrderRequest.shipping_address:type_name -> order.v1.Address
 	6,  // 10: order.v1.CreateOrderResponse.order:type_name -> order.v1.Order
-	6,  // 11: order.v1.GetOrderResponse.order:type_name -> order.v1.Order
+	6,  // 11: order.v1.GetOrderByIDResponse.order:type_name -> order.v1.Order
 	6,  // 12: order.v1.CancelOrderResponse.order:type_name -> order.v1.Order
 	6,  // 13: order.v1.ListOrdersByCustomerResponse.orders:type_name -> order.v1.Order
 	7,  // 14: order.v1.OrderService.CreateOrder:input_type -> order.v1.CreateOrderRequest
-	9,  // 15: order.v1.OrderService.GetOrder:input_type -> order.v1.GetOrderRequest
+	9,  // 15: order.v1.OrderService.GetOrderByID:input_type -> order.v1.GetOrderByIDRequest
 	11, // 16: order.v1.OrderService.CancelOrder:input_type -> order.v1.CancelOrderRequest
 	13, // 17: order.v1.OrderService.ListOrdersByCustomer:input_type -> order.v1.ListOrdersByCustomerRequest
 	8,  // 18: order.v1.OrderService.CreateOrder:output_type -> order.v1.CreateOrderResponse
-	10, // 19: order.v1.OrderService.GetOrder:output_type -> order.v1.GetOrderResponse
+	10, // 19: order.v1.OrderService.GetOrderByID:output_type -> order.v1.GetOrderByIDResponse
 	12, // 20: order.v1.OrderService.CancelOrder:output_type -> order.v1.CancelOrderResponse
 	14, // 21: order.v1.OrderService.ListOrdersByCustomer:output_type -> order.v1.ListOrdersByCustomerResponse
 	18, // [18:22] is the sub-list for method output_type

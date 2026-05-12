@@ -447,27 +447,27 @@ func (x *CreatePaymentResponse) GetPayment() *Payment {
 	return nil
 }
 
-type GetPaymentRequest struct {
+type GetPaymentByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PaymentId     string                 `protobuf:"bytes,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetPaymentRequest) Reset() {
-	*x = GetPaymentRequest{}
+func (x *GetPaymentByIDRequest) Reset() {
+	*x = GetPaymentByIDRequest{}
 	mi := &file_payment___v1_payment_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetPaymentRequest) String() string {
+func (x *GetPaymentByIDRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetPaymentRequest) ProtoMessage() {}
+func (*GetPaymentByIDRequest) ProtoMessage() {}
 
-func (x *GetPaymentRequest) ProtoReflect() protoreflect.Message {
+func (x *GetPaymentByIDRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_payment___v1_payment_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -479,39 +479,39 @@ func (x *GetPaymentRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPaymentRequest.ProtoReflect.Descriptor instead.
-func (*GetPaymentRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPaymentByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetPaymentByIDRequest) Descriptor() ([]byte, []int) {
 	return file_payment___v1_payment_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetPaymentRequest) GetPaymentId() string {
+func (x *GetPaymentByIDRequest) GetPaymentId() string {
 	if x != nil {
 		return x.PaymentId
 	}
 	return ""
 }
 
-type GetPaymentResponse struct {
+type GetPaymentByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Payment       *Payment               `protobuf:"bytes,1,opt,name=payment,proto3" json:"payment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetPaymentResponse) Reset() {
-	*x = GetPaymentResponse{}
+func (x *GetPaymentByIDResponse) Reset() {
+	*x = GetPaymentByIDResponse{}
 	mi := &file_payment___v1_payment_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetPaymentResponse) String() string {
+func (x *GetPaymentByIDResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetPaymentResponse) ProtoMessage() {}
+func (*GetPaymentByIDResponse) ProtoMessage() {}
 
-func (x *GetPaymentResponse) ProtoReflect() protoreflect.Message {
+func (x *GetPaymentByIDResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_payment___v1_payment_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -523,12 +523,12 @@ func (x *GetPaymentResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetPaymentResponse.ProtoReflect.Descriptor instead.
-func (*GetPaymentResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPaymentByIDResponse.ProtoReflect.Descriptor instead.
+func (*GetPaymentByIDResponse) Descriptor() ([]byte, []int) {
 	return file_payment___v1_payment_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetPaymentResponse) GetPayment() *Payment {
+func (x *GetPaymentByIDResponse) GetPayment() *Payment {
 	if x != nil {
 		return x.Payment
 	}
@@ -658,11 +658,11 @@ const file_payment___v1_payment_proto_rawDesc = "" +
 	"\x16payment_method_details\x18\x05 \x01(\tR\x14paymentMethodDetails\x12'\n" +
 	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\"F\n" +
 	"\x15CreatePaymentResponse\x12-\n" +
-	"\apayment\x18\x01 \x01(\v2\x13.payment.v1.PaymentR\apayment\"2\n" +
-	"\x11GetPaymentRequest\x12\x1d\n" +
+	"\apayment\x18\x01 \x01(\v2\x13.payment.v1.PaymentR\apayment\"6\n" +
+	"\x15GetPaymentByIDRequest\x12\x1d\n" +
 	"\n" +
-	"payment_id\x18\x01 \x01(\tR\tpaymentId\"C\n" +
-	"\x12GetPaymentResponse\x12-\n" +
+	"payment_id\x18\x01 \x01(\tR\tpaymentId\"G\n" +
+	"\x16GetPaymentByIDResponse\x12-\n" +
 	"\apayment\x18\x01 \x01(\v2\x13.payment.v1.PaymentR\apayment\"M\n" +
 	"\x14CancelPaymentRequest\x12\x1d\n" +
 	"\n" +
@@ -686,11 +686,10 @@ const file_payment___v1_payment_proto_rawDesc = "" +
 	"\x11PaymentMethodType\x12#\n" +
 	"\x1fPAYMENT_METHOD_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18PAYMENT_METHOD_TYPE_CARD\x10\x01\x12\x1c\n" +
-	"\x18PAYMENT_METHOD_TYPE_CASH\x10\x022\x89\x02\n" +
+	"\x18PAYMENT_METHOD_TYPE_CASH\x10\x022\x95\x02\n" +
 	"\x0ePaymentService\x12T\n" +
-	"\rCreatePayment\x12 .payment.v1.CreatePaymentRequest\x1a!.payment.v1.CreatePaymentResponse\x12K\n" +
-	"\n" +
-	"GetPayment\x12\x1d.payment.v1.GetPaymentRequest\x1a\x1e.payment.v1.GetPaymentResponse\x12T\n" +
+	"\rCreatePayment\x12 .payment.v1.CreatePaymentRequest\x1a!.payment.v1.CreatePaymentResponse\x12W\n" +
+	"\x0eGetPaymentByID\x12!.payment.v1.GetPaymentByIDRequest\x1a\".payment.v1.GetPaymentByIDResponse\x12T\n" +
 	"\rCancelPayment\x12 .payment.v1.CancelPaymentRequest\x1a!.payment.v1.CancelPaymentResponseBGZEgithub.com/vladfc/event-driven-ecommerce-app/gen/payment/v1;paymentv1b\x06proto3"
 
 var (
@@ -708,17 +707,17 @@ func file_payment___v1_payment_proto_rawDescGZIP() []byte {
 var file_payment___v1_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_payment___v1_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_payment___v1_payment_proto_goTypes = []any{
-	(PaymentStatus)(0),            // 0: payment.v1.PaymentStatus
-	(Currency)(0),                 // 1: payment.v1.Currency
-	(PaymentMethodType)(0),        // 2: payment.v1.PaymentMethodType
-	(*Money)(nil),                 // 3: payment.v1.Money
-	(*Payment)(nil),               // 4: payment.v1.Payment
-	(*CreatePaymentRequest)(nil),  // 5: payment.v1.CreatePaymentRequest
-	(*CreatePaymentResponse)(nil), // 6: payment.v1.CreatePaymentResponse
-	(*GetPaymentRequest)(nil),     // 7: payment.v1.GetPaymentRequest
-	(*GetPaymentResponse)(nil),    // 8: payment.v1.GetPaymentResponse
-	(*CancelPaymentRequest)(nil),  // 9: payment.v1.CancelPaymentRequest
-	(*CancelPaymentResponse)(nil), // 10: payment.v1.CancelPaymentResponse
+	(PaymentStatus)(0),             // 0: payment.v1.PaymentStatus
+	(Currency)(0),                  // 1: payment.v1.Currency
+	(PaymentMethodType)(0),         // 2: payment.v1.PaymentMethodType
+	(*Money)(nil),                  // 3: payment.v1.Money
+	(*Payment)(nil),                // 4: payment.v1.Payment
+	(*CreatePaymentRequest)(nil),   // 5: payment.v1.CreatePaymentRequest
+	(*CreatePaymentResponse)(nil),  // 6: payment.v1.CreatePaymentResponse
+	(*GetPaymentByIDRequest)(nil),  // 7: payment.v1.GetPaymentByIDRequest
+	(*GetPaymentByIDResponse)(nil), // 8: payment.v1.GetPaymentByIDResponse
+	(*CancelPaymentRequest)(nil),   // 9: payment.v1.CancelPaymentRequest
+	(*CancelPaymentResponse)(nil),  // 10: payment.v1.CancelPaymentResponse
 }
 var file_payment___v1_payment_proto_depIdxs = []int32{
 	1,  // 0: payment.v1.Money.currency:type_name -> payment.v1.Currency
@@ -728,13 +727,13 @@ var file_payment___v1_payment_proto_depIdxs = []int32{
 	3,  // 4: payment.v1.CreatePaymentRequest.amount:type_name -> payment.v1.Money
 	2,  // 5: payment.v1.CreatePaymentRequest.payment_method:type_name -> payment.v1.PaymentMethodType
 	4,  // 6: payment.v1.CreatePaymentResponse.payment:type_name -> payment.v1.Payment
-	4,  // 7: payment.v1.GetPaymentResponse.payment:type_name -> payment.v1.Payment
+	4,  // 7: payment.v1.GetPaymentByIDResponse.payment:type_name -> payment.v1.Payment
 	4,  // 8: payment.v1.CancelPaymentResponse.payment:type_name -> payment.v1.Payment
 	5,  // 9: payment.v1.PaymentService.CreatePayment:input_type -> payment.v1.CreatePaymentRequest
-	7,  // 10: payment.v1.PaymentService.GetPayment:input_type -> payment.v1.GetPaymentRequest
+	7,  // 10: payment.v1.PaymentService.GetPaymentByID:input_type -> payment.v1.GetPaymentByIDRequest
 	9,  // 11: payment.v1.PaymentService.CancelPayment:input_type -> payment.v1.CancelPaymentRequest
 	6,  // 12: payment.v1.PaymentService.CreatePayment:output_type -> payment.v1.CreatePaymentResponse
-	8,  // 13: payment.v1.PaymentService.GetPayment:output_type -> payment.v1.GetPaymentResponse
+	8,  // 13: payment.v1.PaymentService.GetPaymentByID:output_type -> payment.v1.GetPaymentByIDResponse
 	10, // 14: payment.v1.PaymentService.CancelPayment:output_type -> payment.v1.CancelPaymentResponse
 	12, // [12:15] is the sub-list for method output_type
 	9,  // [9:12] is the sub-list for method input_type

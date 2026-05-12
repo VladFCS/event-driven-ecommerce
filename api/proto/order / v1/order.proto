@@ -6,7 +6,7 @@ option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1;o
 
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
-  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc GetOrderByID(GetOrderByIDRequest) returns (GetOrderByIDResponse);
   rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
   rpc ListOrdersByCustomer(ListOrdersByCustomerRequest) returns (ListOrdersByCustomerResponse);
 }
@@ -80,11 +80,11 @@ message CreateOrderResponse {
   Order order = 1;
 }
 
-message GetOrderRequest {
+message GetOrderByIDRequest {
   string order_id = 1;
 }
 
-message GetOrderResponse {
+message GetOrderByIDResponse {
   Order order = 1;
 }
 
