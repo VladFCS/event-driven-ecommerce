@@ -2,44 +2,11 @@ package inventory
 
 import (
 	"context"
-	"errors"
 
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 	"google.golang.org/grpc"
 )
-
-var (
-	ErrReserveStockRequestNil = errors.New("reserve stock request is nil")
-	ErrReleaseStockRequestNil = errors.New("release stock request is nil")
-)
-
-type Stock struct {
-	ProductID         string
-	AvailableQuantity int64
-	ReservedQuantity  int64
-	TotalQuantity     int64
-}
-
-type ReserveStockRequest struct {
-	ProductID string
-	Quantity  int64
-	OrderID   string
-}
-
-type ReserveStockResponse struct {
-	Stock *Stock
-}
-
-type ReleaseStockRequest struct {
-	ProductID string
-	Quantity  int64
-	OrderID   string
-}
-
-type ReleaseStockResponse struct {
-	Stock *Stock
-}
 
 type GRPCClient struct {
 	grpcClient inventoryv1.InventoryServiceClient
@@ -87,17 +54,4 @@ func (c *GRPCClient) ReleaseStock(ctx context.Context, req *ReleaseStockRequest)
 	return &ReleaseStockResponse{
 		Stock: mapProtoStock(grpcResp.GetStock()),
 	}, nil
-}
-
-func mapProtoStock(stock *inventoryv1.Stock) *Stock {
-	if stock == nil {
-		return nil
-	}
-
-	return &Stock{
-		ProductID:         stock.GetProductId(),
-		AvailableQuantity: stock.GetAvailableQuantity(),
-		ReservedQuantity:  stock.GetReservedQuantity(),
-		TotalQuantity:     stock.GetTotalQuantity(),
-	}
 }
