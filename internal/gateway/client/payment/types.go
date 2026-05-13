@@ -31,6 +31,14 @@ type GetPaymentByIDResponse struct {
 	Payment *Payment
 }
 
+type GetPaymentByOrderIDRequest struct {
+	OrderID string
+}
+
+type GetPaymentByOrderIDResponse struct {
+	Payment *Payment
+}
+
 type CancelPaymentRequest struct {
 	PaymentID string
 	Reason    string

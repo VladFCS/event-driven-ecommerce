@@ -49,6 +49,47 @@ func (s *GatewayService) GetPaymentByID(ctx context.Context, in *GetPaymentByIDI
 	}, nil
 }
 
+func (s *GatewayService) GetPaymentByOrderID(ctx context.Context, in *GetPaymentByOrderIDInput) (*GetPaymentByOrderIDResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: get payment by order id request is nil", ErrInvalidInput)
+	}
+
+	orderID := strings.TrimSpace(in.OrderID)
+	if orderID == "" {
+		return nil, fmt.Errorf("%w: order id is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.readTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.readTimeout)
+	}
+	defer cancel()
+
+	paymentResp, err := s.paymentClient.GetPaymentByOrderID(opCtx, &paymentclient.GetPaymentByOrderIDRequest{
+		OrderID: orderID,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("payment get by order", err)
+	}
+	if paymentResp == nil || paymentResp.Payment == nil {
+		return nil, fmt.Errorf("%w: payment response is empty", ErrDownstreamFailed)
+	}
+
+	payment := paymentResp.Payment
+	return &GetPaymentByOrderIDResult{
+		PaymentID:  payment.ID,
+		OrderID:    payment.OrderID,
+		CustomerID: payment.CustomerID,
+		Status:     payment.Status,
+		Amount: Money{
+			Currency:    payment.Amount.Currency,
+			AmountCents: payment.Amount.AmountCents,
+		},
+		PaymentMethod: payment.PaymentMethod,
+	}, nil
+}
+
 func (s *GatewayService) CancelPayment(ctx context.Context, in *CancelPaymentInput) (*CancelPaymentResult, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: cancel payment request is nil", ErrInvalidInput)

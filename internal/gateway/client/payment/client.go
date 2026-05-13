@@ -71,6 +71,28 @@ func (c *GRPCClient) GetPaymentByID(ctx context.Context, req *GetPaymentByIDRequ
 	}, nil
 }
 
+func (c *GRPCClient) GetPaymentByOrderID(ctx context.Context, req *GetPaymentByOrderIDRequest) (*GetPaymentByOrderIDResponse, error) {
+	if req == nil {
+		return nil, ErrGetPaymentByOrderIDRequestNil
+	}
+
+	orderID := strings.TrimSpace(req.OrderID)
+	if orderID == "" {
+		return nil, ErrOrderIDRequired
+	}
+
+	grpcResp, err := c.grpcClient.GetPaymentByOrderID(requestid.WithOutgoingMetadata(ctx), &paymentv1.GetPaymentByOrderIDRequest{
+		OrderId: orderID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetPaymentByOrderIDResponse{
+		Payment: mapProtoPayment(grpcResp.GetPayment()),
+	}, nil
+}
+
 func (c *GRPCClient) CancelPayment(ctx context.Context, req *CancelPaymentRequest) (*CancelPaymentResponse, error) {
 	if req == nil {
 		return nil, ErrCancelPaymentRequestNil
