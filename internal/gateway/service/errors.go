@@ -12,6 +12,7 @@ import (
 var (
 	ErrInvalidInput             = errors.New("invalid input")
 	ErrIdempotencyConflict      = errors.New("idempotency key conflict")
+	ErrPreconditionFailed       = errors.New("operation cannot be performed in current resource state")
 	ErrUnsupportedCurrency      = errors.New("unsupported currency")
 	ErrUnsupportedPaymentMethod = errors.New("unsupported payment method")
 	ErrDownstreamNotFound       = errors.New("downstream resource not found")
@@ -30,6 +31,8 @@ func wrapDownstreamError(operation string, err error) error {
 		return fmt.Errorf("%w: %s: %v", ErrTimeout, operation, err)
 	case errors.Is(err, context.Canceled), status.Code(err) == codes.Canceled:
 		return fmt.Errorf("%w: %s: %v", ErrRequestCanceled, operation, err)
+	case status.Code(err) == codes.FailedPrecondition:
+		return fmt.Errorf("%w: %s: %v", ErrPreconditionFailed, operation, err)
 	case status.Code(err) == codes.NotFound:
 		return fmt.Errorf("%w: %s: %v", ErrDownstreamNotFound, operation, err)
 	}

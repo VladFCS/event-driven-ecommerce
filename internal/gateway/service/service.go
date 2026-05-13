@@ -27,6 +27,7 @@ type InventoryClient interface {
 type PaymentClient interface {
 	CreatePayment(ctx context.Context, req *paymentclient.CreatePaymentRequest) (*paymentclient.CreatePaymentResponse, error)
 	GetPaymentByID(ctx context.Context, req *paymentclient.GetPaymentByIDRequest) (*paymentclient.GetPaymentByIDResponse, error)
+	CancelPayment(ctx context.Context, req *paymentclient.CancelPaymentRequest) (*paymentclient.CancelPaymentResponse, error)
 }
 
 type CatalogClient interface {

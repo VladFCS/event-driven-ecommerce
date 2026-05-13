@@ -84,6 +84,18 @@ type GetPaymentByIDResult struct {
 	PaymentMethod string
 }
 
+type CancelPaymentInput struct {
+	PaymentID string
+	Reason    string
+}
+
+type CancelPaymentResult struct {
+	PaymentID  string
+	OrderID    string
+	CustomerID string
+	Status     string
+}
+
 type ListOrdersByCustomerInput struct {
 	CustomerID string
 	Page       int
