@@ -7,6 +7,14 @@ type Stock struct {
 	TotalQuantity     int64
 }
 
+type GetStockByProductIDRequest struct {
+	ProductID string
+}
+
+type GetStockByProductIDResponse struct {
+	Stock *Stock
+}
+
 type ReserveStockRequest struct {
 	ProductID string
 	Quantity  int64
