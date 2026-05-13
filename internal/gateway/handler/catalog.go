@@ -13,6 +13,28 @@ const (
 	maxProductListPageSize     = 100
 )
 
+func (h *HTTPHandler) CreateProduct(c *gin.Context) {
+	var req CreateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeBindError(c, err, req, "invalid request body")
+		return
+	}
+
+	resp, err := h.gatewayService.CreateProduct(c.Request.Context(), &gatewayservice.CreateProductInput{
+		ProductID:   req.ProductID,
+		Name:        req.Name,
+		Description: req.Description,
+		PriceCents:  req.PriceCents,
+		Currency:    req.Currency,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, toCreateProductResponse(resp))
+}
+
 func (h *HTTPHandler) GetProductByID(c *gin.Context) {
 	var req GetProductByIDURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
@@ -93,4 +115,14 @@ func toListProductsResponse(result *gatewayservice.ListProductsResult) *ListProd
 	}
 
 	return response
+}
+
+func toCreateProductResponse(result *gatewayservice.CreateProductResult) *CreateProductResponse {
+	return &CreateProductResponse{
+		ProductID:   result.ProductID,
+		Name:        result.Name,
+		Description: result.Description,
+		PriceCents:  result.PriceCents,
+		Currency:    result.Currency,
+	}
 }

@@ -11,6 +11,7 @@ type GatewayService interface {
 	Checkout(ctx context.Context, in *gatewayservice.CheckoutInput) (*gatewayservice.CheckoutResult, error)
 	CancelOrder(ctx context.Context, in *gatewayservice.CancelOrderInput) (*gatewayservice.CancelOrderResult, error)
 	CancelPayment(ctx context.Context, in *gatewayservice.CancelPaymentInput) (*gatewayservice.CancelPaymentResult, error)
+	CreateProduct(ctx context.Context, in *gatewayservice.CreateProductInput) (*gatewayservice.CreateProductResult, error)
 	GetOrderByID(ctx context.Context, in *gatewayservice.GetOrderByIDInput) (*gatewayservice.GetOrderByIDResult, error)
 	GetPaymentByID(ctx context.Context, in *gatewayservice.GetPaymentByIDInput) (*gatewayservice.GetPaymentByIDResult, error)
 	GetProductByID(ctx context.Context, in *gatewayservice.GetProductByIDInput) (*gatewayservice.GetProductByIDResult, error)
@@ -43,5 +44,6 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.GET("/payments/:payment_id", h.GetPaymentByID)
 	r.GET("/catalog/products/:product_id", h.GetProductByID)
 	r.GET("/catalog/products", h.ListProducts)
+	r.POST("/catalog/products", h.CreateProduct)
 	r.GET("/inventory/products/:product_id/stock", h.GetStockByProductID)
 }

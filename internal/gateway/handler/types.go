@@ -95,6 +95,14 @@ type PaymentRequest struct {
 	MethodDetails string `json:"method_details"`
 }
 
+type CreateProductRequest struct {
+	ProductID   string `json:"product_id" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents" binding:"required,gt=0"`
+	Currency    string `json:"currency" binding:"required"`
+}
+
 type OrderItemResponse struct {
 	ProductID   string        `json:"product_id"`
 	SKU         string        `json:"sku"`
@@ -167,6 +175,14 @@ type ListProductsResponse struct {
 	Page     int                      `json:"page"`
 	PageSize int                      `json:"page_size"`
 	Total    int64                    `json:"total"`
+}
+
+type CreateProductResponse struct {
+	ProductID   string `json:"product_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents"`
+	Currency    string `json:"currency"`
 }
 
 type GetStockByProductIDURIRequest struct {
