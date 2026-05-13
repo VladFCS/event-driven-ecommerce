@@ -1,6 +1,11 @@
 package catalog
 
-import catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
+import (
+	"fmt"
+	"strings"
+
+	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
+)
 
 func mapProtoProduct(product *catalogv1.Product) *Product {
 	if product == nil {
@@ -25,4 +30,15 @@ func mapProtoProducts(products []*catalogv1.Product) []Product {
 	}
 
 	return converted
+}
+
+func parseCurrency(value string) (catalogv1.Currency, error) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "USD", "CURRENCY_USD":
+		return catalogv1.Currency_CURRENCY_USD, nil
+	case "EUR", "CURRENCY_EUR":
+		return catalogv1.Currency_CURRENCY_EUR, nil
+	default:
+		return catalogv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedCurrency, value)
+	}
 }

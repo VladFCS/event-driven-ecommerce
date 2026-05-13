@@ -8,6 +8,18 @@ type Product struct {
 	Currency    string
 }
 
+type CreateProductRequest struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
+}
+
+type CreateProductResponse struct {
+	Product *Product
+}
+
 type GetProductByIDResponse struct {
 	Product *Product
 }

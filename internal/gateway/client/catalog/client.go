@@ -19,6 +19,34 @@ func NewClient(conn grpc.ClientConnInterface) *GRPCClient {
 	}
 }
 
+func (c *GRPCClient) CreateProduct(ctx context.Context, req *CreateProductRequest) (*CreateProductResponse, error) {
+	if req == nil {
+		return nil, ErrCreateProductRequestNil
+	}
+
+	currency, err := parseCurrency(req.Currency)
+	if err != nil {
+		return nil, err
+	}
+
+	grpcResp, err := c.grpcClient.CreateProduct(requestid.WithOutgoingMetadata(ctx), &catalogv1.CreateProductRequest{
+		Product: &catalogv1.Product{
+			ProductId:   strings.TrimSpace(req.ProductID),
+			Name:        strings.TrimSpace(req.Name),
+			Description: strings.TrimSpace(req.Description),
+			PriceCents:  req.PriceCents,
+			Currency:    currency,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateProductResponse{
+		Product: mapProtoProduct(grpcResp.GetProduct()),
+	}, nil
+}
+
 func (c *GRPCClient) GetProductByID(ctx context.Context, productID string) (*GetProductByIDResponse, error) {
 	productID = strings.TrimSpace(productID)
 	if productID == "" {
