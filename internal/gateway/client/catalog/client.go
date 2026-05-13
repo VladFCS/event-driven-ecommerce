@@ -85,3 +85,19 @@ func (c *GRPCClient) ListProducts(ctx context.Context, req *ListProductsRequest)
 		Total:    grpcResp.GetTotal(),
 	}, nil
 }
+
+func (c *GRPCClient) DeleteProduct(ctx context.Context, productID string) error {
+	productID = strings.TrimSpace(productID)
+	if productID == "" {
+		return ErrProductIDRequired
+	}
+
+	_, err := c.grpcClient.DeleteProduct(requestid.WithOutgoingMetadata(ctx), &catalogv1.DeleteProductRequest{
+		ProductId: productID,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

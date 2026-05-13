@@ -164,6 +164,10 @@ type CreateProductResult struct {
 	Currency    string
 }
 
+type DeleteProductInput struct {
+	ProductID string
+}
+
 type GetProductByIDResult struct {
 	ProductID   string
 	Name        string

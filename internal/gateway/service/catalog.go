@@ -97,6 +97,30 @@ func (s *GatewayService) GetProductByID(ctx context.Context, in *GetProductByIDI
 	}, nil
 }
 
+func (s *GatewayService) DeleteProduct(ctx context.Context, in *DeleteProductInput) error {
+	if in == nil {
+		return fmt.Errorf("%w: delete product request is nil", ErrInvalidInput)
+	}
+
+	productID := strings.TrimSpace(in.ProductID)
+	if productID == "" {
+		return fmt.Errorf("%w: product id is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.checkoutTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.checkoutTimeout)
+	}
+	defer cancel()
+
+	if err := s.catalogClient.DeleteProduct(opCtx, productID); err != nil {
+		return wrapDownstreamError("catalog product delete", err)
+	}
+
+	return nil
+}
+
 func (s *GatewayService) ListProducts(ctx context.Context, in *ListProductsInput) (*ListProductsResult, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: list products request is nil", ErrInvalidInput)
