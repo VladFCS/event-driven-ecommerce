@@ -70,3 +70,26 @@ func (c *GRPCClient) GetPaymentByID(ctx context.Context, req *GetPaymentByIDRequ
 		Payment: mapProtoPayment(grpcResp.GetPayment()),
 	}, nil
 }
+
+func (c *GRPCClient) CancelPayment(ctx context.Context, req *CancelPaymentRequest) (*CancelPaymentResponse, error) {
+	if req == nil {
+		return nil, ErrCancelPaymentRequestNil
+	}
+
+	paymentID := strings.TrimSpace(req.PaymentID)
+	if paymentID == "" {
+		return nil, ErrPaymentIDRequired
+	}
+
+	grpcResp, err := c.grpcClient.CancelPayment(requestid.WithOutgoingMetadata(ctx), &paymentv1.CancelPaymentRequest{
+		PaymentId: paymentID,
+		Reason:    strings.TrimSpace(req.Reason),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CancelPaymentResponse{
+		Payment: mapProtoPayment(grpcResp.GetPayment()),
+	}, nil
+}
