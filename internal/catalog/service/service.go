@@ -39,3 +39,11 @@ func (s *CatalogService) CreateProduct(ctx context.Context, product domain.Produ
 	}
 	return s.repository.CreateProduct(ctx, product)
 }
+
+func (s *CatalogService) DeleteProduct(ctx context.Context, productID string) error {
+	if strings.TrimSpace(productID) == "" {
+		return domain.ErrInvalidProduct
+	}
+
+	return s.repository.DeleteProduct(ctx, productID)
+}

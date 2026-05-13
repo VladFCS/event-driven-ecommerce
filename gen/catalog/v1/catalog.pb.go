@@ -442,6 +442,86 @@ func (x *CreateProductResponse) GetProduct() *Product {
 	return nil
 }
 
+type DeleteProductRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteProductRequest) Reset() {
+	*x = DeleteProductRequest{}
+	mi := &file_catalog___v1_catalog_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteProductRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteProductRequest) ProtoMessage() {}
+
+func (x *DeleteProductRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog___v1_catalog_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteProductRequest.ProtoReflect.Descriptor instead.
+func (*DeleteProductRequest) Descriptor() ([]byte, []int) {
+	return file_catalog___v1_catalog_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteProductRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+type DeleteProductResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteProductResponse) Reset() {
+	*x = DeleteProductResponse{}
+	mi := &file_catalog___v1_catalog_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteProductResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteProductResponse) ProtoMessage() {}
+
+func (x *DeleteProductResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog___v1_catalog_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteProductResponse.ProtoReflect.Descriptor instead.
+func (*DeleteProductResponse) Descriptor() ([]byte, []int) {
+	return file_catalog___v1_catalog_proto_rawDescGZIP(), []int{8}
+}
+
 var File_catalog___v1_catalog_proto protoreflect.FileDescriptor
 
 const file_catalog___v1_catalog_proto_rawDesc = "" +
@@ -472,15 +552,20 @@ const file_catalog___v1_catalog_proto_rawDesc = "" +
 	"\x14CreateProductRequest\x12-\n" +
 	"\aproduct\x18\x01 \x01(\v2\x13.catalog.v1.ProductR\aproduct\"F\n" +
 	"\x15CreateProductResponse\x12-\n" +
-	"\aproduct\x18\x01 \x01(\v2\x13.catalog.v1.ProductR\aproduct*H\n" +
+	"\aproduct\x18\x01 \x01(\v2\x13.catalog.v1.ProductR\aproduct\"5\n" +
+	"\x14DeleteProductRequest\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId\"\x17\n" +
+	"\x15DeleteProductResponse*H\n" +
 	"\bCurrency\x12\x18\n" +
 	"\x14CURRENCY_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fCURRENCY_USD\x10\x01\x12\x10\n" +
-	"\fCURRENCY_EUR\x10\x022\x92\x02\n" +
+	"\fCURRENCY_EUR\x10\x022\xe8\x02\n" +
 	"\x0eCatalogService\x12W\n" +
 	"\x0eGetProductByID\x12!.catalog.v1.GetProductByIDRequest\x1a\".catalog.v1.GetProductByIDResponse\x12Q\n" +
 	"\fListProducts\x12\x1f.catalog.v1.ListProductsRequest\x1a .catalog.v1.ListProductsResponse\x12T\n" +
-	"\rCreateProduct\x12 .catalog.v1.CreateProductRequest\x1a!.catalog.v1.CreateProductResponseBGZEgithub.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1;catalogv1b\x06proto3"
+	"\rCreateProduct\x12 .catalog.v1.CreateProductRequest\x1a!.catalog.v1.CreateProductResponse\x12T\n" +
+	"\rDeleteProduct\x12 .catalog.v1.DeleteProductRequest\x1a!.catalog.v1.DeleteProductResponseBGZEgithub.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1;catalogv1b\x06proto3"
 
 var (
 	file_catalog___v1_catalog_proto_rawDescOnce sync.Once
@@ -495,7 +580,7 @@ func file_catalog___v1_catalog_proto_rawDescGZIP() []byte {
 }
 
 var file_catalog___v1_catalog_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_catalog___v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_catalog___v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_catalog___v1_catalog_proto_goTypes = []any{
 	(Currency)(0),                  // 0: catalog.v1.Currency
 	(*Product)(nil),                // 1: catalog.v1.Product
@@ -505,6 +590,8 @@ var file_catalog___v1_catalog_proto_goTypes = []any{
 	(*ListProductsResponse)(nil),   // 5: catalog.v1.ListProductsResponse
 	(*CreateProductRequest)(nil),   // 6: catalog.v1.CreateProductRequest
 	(*CreateProductResponse)(nil),  // 7: catalog.v1.CreateProductResponse
+	(*DeleteProductRequest)(nil),   // 8: catalog.v1.DeleteProductRequest
+	(*DeleteProductResponse)(nil),  // 9: catalog.v1.DeleteProductResponse
 }
 var file_catalog___v1_catalog_proto_depIdxs = []int32{
 	0, // 0: catalog.v1.Product.currency:type_name -> catalog.v1.Currency
@@ -515,11 +602,13 @@ var file_catalog___v1_catalog_proto_depIdxs = []int32{
 	2, // 5: catalog.v1.CatalogService.GetProductByID:input_type -> catalog.v1.GetProductByIDRequest
 	4, // 6: catalog.v1.CatalogService.ListProducts:input_type -> catalog.v1.ListProductsRequest
 	6, // 7: catalog.v1.CatalogService.CreateProduct:input_type -> catalog.v1.CreateProductRequest
-	3, // 8: catalog.v1.CatalogService.GetProductByID:output_type -> catalog.v1.GetProductByIDResponse
-	5, // 9: catalog.v1.CatalogService.ListProducts:output_type -> catalog.v1.ListProductsResponse
-	7, // 10: catalog.v1.CatalogService.CreateProduct:output_type -> catalog.v1.CreateProductResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
+	8, // 8: catalog.v1.CatalogService.DeleteProduct:input_type -> catalog.v1.DeleteProductRequest
+	3, // 9: catalog.v1.CatalogService.GetProductByID:output_type -> catalog.v1.GetProductByIDResponse
+	5, // 10: catalog.v1.CatalogService.ListProducts:output_type -> catalog.v1.ListProductsResponse
+	7, // 11: catalog.v1.CatalogService.CreateProduct:output_type -> catalog.v1.CreateProductResponse
+	9, // 12: catalog.v1.CatalogService.DeleteProduct:output_type -> catalog.v1.DeleteProductResponse
+	9, // [9:13] is the sub-list for method output_type
+	5, // [5:9] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
 	5, // [5:5] is the sub-list for extension extendee
 	0, // [0:5] is the sub-list for field type_name
@@ -536,7 +625,7 @@ func file_catalog___v1_catalog_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog___v1_catalog_proto_rawDesc), len(file_catalog___v1_catalog_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

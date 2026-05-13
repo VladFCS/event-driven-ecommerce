@@ -78,3 +78,15 @@ func (r *MemoryRepository) CreateProduct(ctx context.Context, product domain.Pro
 	r.product[product.ID] = product
 	return product, nil
 }
+
+func (r *MemoryRepository) DeleteProduct(ctx context.Context, productID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, ok := r.product[productID]; !ok {
+		return domain.ErrProductNotFound
+	}
+
+	delete(r.product, productID)
+	return nil
+}

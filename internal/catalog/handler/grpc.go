@@ -93,6 +93,16 @@ func (h *GRPCHandler) CreateProduct(ctx context.Context, req *catalogv1.CreatePr
 	}, nil
 }
 
+func (h *GRPCHandler) DeleteProduct(ctx context.Context, req *catalogv1.DeleteProductRequest) (*catalogv1.DeleteProductResponse, error) {
+	if err := h.service.DeleteProduct(ctx, req.GetProductId()); err != nil {
+		return nil, mapCatalogError(err)
+	}
+
+	h.logger.InfoContext(ctx, "product deleted", slog.String("product_id", req.GetProductId()))
+
+	return &catalogv1.DeleteProductResponse{}, nil
+}
+
 func convertProductToProto(product domain.Product) *catalogv1.Product {
 	return &catalogv1.Product{
 		ProductId:   product.ID,
