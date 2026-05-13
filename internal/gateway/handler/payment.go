@@ -25,6 +25,24 @@ func (h *HTTPHandler) GetPaymentByID(c *gin.Context) {
 	c.JSON(http.StatusOK, toGetPaymentByIDResponse(resp))
 }
 
+func (h *HTTPHandler) GetPaymentByOrderID(c *gin.Context) {
+	var req GetPaymentByOrderIDURIRequest
+	if err := c.ShouldBindUri(&req); err != nil {
+		writeBindError(c, err, req, "invalid request path parameters")
+		return
+	}
+
+	resp, err := h.gatewayService.GetPaymentByOrderID(c.Request.Context(), &gatewayservice.GetPaymentByOrderIDInput{
+		OrderID: req.OrderID,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toGetPaymentByOrderIDResponse(resp))
+}
+
 func (h *HTTPHandler) CancelPayment(c *gin.Context) {
 	var uriReq CancelPaymentURIRequest
 	if err := c.ShouldBindUri(&uriReq); err != nil {
@@ -70,5 +88,19 @@ func toCancelPaymentResponse(result *gatewayservice.CancelPaymentResult) *Cancel
 		OrderID:    result.OrderID,
 		CustomerID: result.CustomerID,
 		Status:     result.Status,
+	}
+}
+
+func toGetPaymentByOrderIDResponse(result *gatewayservice.GetPaymentByOrderIDResult) *GetPaymentByOrderIDResponse {
+	return &GetPaymentByOrderIDResponse{
+		PaymentID:  result.PaymentID,
+		OrderID:    result.OrderID,
+		CustomerID: result.CustomerID,
+		Status:     result.Status,
+		Amount: MoneyResponse{
+			Currency:    result.Amount.Currency,
+			AmountCents: result.Amount.AmountCents,
+		},
+		PaymentMethod: result.PaymentMethod,
 	}
 }

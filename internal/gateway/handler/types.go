@@ -137,7 +137,20 @@ type GetPaymentByIDURIRequest struct {
 	PaymentID string `uri:"payment_id" binding:"required"`
 }
 
+type GetPaymentByOrderIDURIRequest struct {
+	OrderID string `uri:"order_id" binding:"required"`
+}
+
 type GetPaymentByIDResponse struct {
+	PaymentID     string        `json:"payment_id"`
+	OrderID       string        `json:"order_id"`
+	CustomerID    string        `json:"customer_id"`
+	Status        string        `json:"status"`
+	Amount        MoneyResponse `json:"amount"`
+	PaymentMethod string        `json:"payment_method"`
+}
+
+type GetPaymentByOrderIDResponse struct {
 	PaymentID     string        `json:"payment_id"`
 	OrderID       string        `json:"order_id"`
 	CustomerID    string        `json:"customer_id"`
