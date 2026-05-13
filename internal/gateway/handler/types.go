@@ -26,6 +26,14 @@ type CancelOrderRequest struct {
 	Reason string `json:"reason" binding:"required"`
 }
 
+type CancelPaymentURIRequest struct {
+	PaymentID string `uri:"payment_id" binding:"required"`
+}
+
+type CancelPaymentRequest struct {
+	Reason string `json:"reason" binding:"required"`
+}
+
 type ListOrdersByCustomerURIRequest struct {
 	CustomerID string `uri:"customer_id" binding:"required"`
 }
@@ -128,6 +136,13 @@ type GetPaymentByIDResponse struct {
 	Status        string        `json:"status"`
 	Amount        MoneyResponse `json:"amount"`
 	PaymentMethod string        `json:"payment_method"`
+}
+
+type CancelPaymentResponse struct {
+	PaymentID  string `json:"payment_id"`
+	OrderID    string `json:"order_id"`
+	CustomerID string `json:"customer_id"`
+	Status     string `json:"status"`
 }
 
 type GetProductByIDURIRequest struct {

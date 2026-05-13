@@ -52,6 +52,7 @@ func statusCodeForError(err error) int {
 		statusCode = http.StatusRequestTimeout
 	case errors.Is(err, gatewayservice.ErrInvalidInput),
 		errors.Is(err, gatewayservice.ErrIdempotencyConflict),
+		errors.Is(err, gatewayservice.ErrPreconditionFailed),
 		errors.Is(err, gatewayservice.ErrUnsupportedCurrency),
 		errors.Is(err, gatewayservice.ErrUnsupportedPaymentMethod):
 		statusCode = http.StatusBadRequest
@@ -80,6 +81,8 @@ func publicErrorMessage(err error) string {
 		return "request was canceled"
 	case errors.Is(err, gatewayservice.ErrIdempotencyConflict):
 		return "request conflicts with an existing idempotency key"
+	case errors.Is(err, gatewayservice.ErrPreconditionFailed):
+		return "operation cannot be performed in current resource state"
 	case errors.Is(err, gatewayservice.ErrUnsupportedCurrency):
 		return "unsupported currency"
 	case errors.Is(err, gatewayservice.ErrUnsupportedPaymentMethod):
