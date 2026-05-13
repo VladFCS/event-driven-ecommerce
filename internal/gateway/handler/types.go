@@ -141,3 +141,13 @@ type GetProductByIDResponse struct {
 	PriceCents  int64  `json:"price_cents"`
 	Currency    string `json:"currency"`
 }
+
+type GetStockByProductIDURIRequest struct {
+	ProductID string `uri:"product_id" binding:"required"`
+}
+
+type GetStockByProductIDResponse struct {
+	ProductID string `json:"product_id"`
+	Available int64  `json:"available"`
+	Reserved  int64  `json:"reserved"`
+}
