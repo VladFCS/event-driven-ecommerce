@@ -7,6 +7,12 @@ import (
 	gatewayservice "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/service"
 )
 
+const (
+	defaultProductListPage     = 1
+	defaultProductListPageSize = 20
+	maxProductListPageSize     = 100
+)
+
 func (h *HTTPHandler) GetProductByID(c *gin.Context) {
 	var req GetProductByIDURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
@@ -33,4 +39,58 @@ func toGetProductByIDResponse(result *gatewayservice.GetProductByIDResult) *GetP
 		PriceCents:  result.PriceCents,
 		Currency:    result.Currency,
 	}
+}
+
+func (h *HTTPHandler) ListProducts(c *gin.Context) {
+	var queryReq ListProductsQueryRequest
+	if err := c.ShouldBindQuery(&queryReq); err != nil {
+		writeBindError(c, err, queryReq, "invalid query parameters")
+		return
+	}
+
+	page := queryReq.Page
+	if page <= 0 {
+		page = defaultProductListPage
+	}
+
+	pageSize := queryReq.PageSize
+	if pageSize <= 0 {
+		pageSize = defaultProductListPageSize
+	}
+	if pageSize > maxProductListPageSize {
+		pageSize = maxProductListPageSize
+	}
+
+	resp, err := h.gatewayService.ListProducts(c.Request.Context(), &gatewayservice.ListProductsInput{
+		Page:     page,
+		PageSize: pageSize,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toListProductsResponse(resp))
+}
+
+func toListProductsResponse(result *gatewayservice.ListProductsResult) *ListProductsResponse {
+	response := &ListProductsResponse{
+		Products: make([]GetProductByIDResponse, 0, len(result.Products)),
+		Page:     result.Page,
+		PageSize: result.PageSize,
+		Total:    result.Total,
+	}
+
+	for _, product := range result.Products {
+		product := product
+		response.Products = append(response.Products, GetProductByIDResponse{
+			ProductID:   product.ProductID,
+			Name:        product.Name,
+			Description: product.Description,
+			PriceCents:  product.PriceCents,
+			Currency:    product.Currency,
+		})
+	}
+
+	return response
 }

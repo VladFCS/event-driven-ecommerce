@@ -134,12 +134,24 @@ type GetProductByIDURIRequest struct {
 	ProductID string `uri:"product_id" binding:"required"`
 }
 
+type ListProductsQueryRequest struct {
+	Page     int `form:"page"`
+	PageSize int `form:"page_size"`
+}
+
 type GetProductByIDResponse struct {
 	ProductID   string `json:"product_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	PriceCents  int64  `json:"price_cents"`
 	Currency    string `json:"currency"`
+}
+
+type ListProductsResponse struct {
+	Products []GetProductByIDResponse `json:"products"`
+	Page     int                      `json:"page"`
+	PageSize int                      `json:"page_size"`
+	Total    int64                    `json:"total"`
 }
 
 type GetStockByProductIDURIRequest struct {

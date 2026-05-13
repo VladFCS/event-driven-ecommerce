@@ -13,6 +13,7 @@ type GatewayService interface {
 	GetOrderByID(ctx context.Context, in *gatewayservice.GetOrderByIDInput) (*gatewayservice.GetOrderByIDResult, error)
 	GetPaymentByID(ctx context.Context, in *gatewayservice.GetPaymentByIDInput) (*gatewayservice.GetPaymentByIDResult, error)
 	GetProductByID(ctx context.Context, in *gatewayservice.GetProductByIDInput) (*gatewayservice.GetProductByIDResult, error)
+	ListProducts(ctx context.Context, in *gatewayservice.ListProductsInput) (*gatewayservice.ListProductsResult, error)
 	GetStockByProductID(ctx context.Context, in *gatewayservice.GetStockByProductIDInput) (*gatewayservice.GetStockByProductIDResult, error)
 	ListOrdersByCustomer(ctx context.Context, in *gatewayservice.ListOrdersByCustomerInput) (*gatewayservice.ListOrdersByCustomerResult, error)
 	ReadinessStatus() gatewayservice.ReadinessStatus
@@ -39,5 +40,6 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 
 	r.GET("/payments/:payment_id", h.GetPaymentByID)
 	r.GET("/catalog/products/:product_id", h.GetProductByID)
+	r.GET("/catalog/products", h.ListProducts)
 	r.GET("/inventory/products/:product_id/stock", h.GetStockByProductID)
 }
