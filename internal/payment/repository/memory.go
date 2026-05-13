@@ -11,16 +11,19 @@ import (
 type MemoryRepository struct {
 	mu                 sync.RWMutex
 	payments           map[string]domain.Payment
+	orderIDToID        map[string]string
 	idempotencyKeyToID map[string]string
 }
 
 func NewMemoryRepository(seed []domain.Payment) *MemoryRepository {
 	payments := make(map[string]domain.Payment, len(seed))
+	orderIDs := make(map[string]string, len(seed))
 	idempotencyKeys := make(map[string]string, len(seed))
 
 	for _, payment := range seed {
 		cloned := clonePayment(payment)
 		payments[cloned.ID] = cloned
+		orderIDs[cloned.OrderID] = cloned.ID
 
 		if key := strings.TrimSpace(cloned.IdempotencyKey); key != "" {
 			idempotencyKeys[key] = cloned.ID
@@ -29,6 +32,7 @@ func NewMemoryRepository(seed []domain.Payment) *MemoryRepository {
 
 	return &MemoryRepository{
 		payments:           payments,
+		orderIDToID:        orderIDs,
 		idempotencyKeyToID: idempotencyKeys,
 	}
 }
@@ -55,6 +59,7 @@ func (r *MemoryRepository) CreatePayment(ctx context.Context, payment domain.Pay
 
 	cloned := clonePayment(payment)
 	r.payments[cloned.ID] = cloned
+	r.orderIDToID[cloned.OrderID] = cloned.ID
 
 	if key := strings.TrimSpace(cloned.IdempotencyKey); key != "" {
 		r.idempotencyKeyToID[key] = cloned.ID
@@ -71,6 +76,30 @@ func (r *MemoryRepository) GetPaymentByID(ctx context.Context, paymentID string)
 
 	if strings.TrimSpace(paymentID) == "" {
 		return domain.Payment{}, domain.ErrInvalidPaymentID
+	}
+
+	payment, ok := r.payments[paymentID]
+	if !ok {
+		return domain.Payment{}, domain.ErrPaymentNotFound
+	}
+
+	return clonePayment(payment), nil
+}
+
+func (r *MemoryRepository) GetPaymentByOrderID(ctx context.Context, orderID string) (domain.Payment, error) {
+	_ = ctx
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return domain.Payment{}, domain.ErrInvalidPayment
+	}
+
+	paymentID, ok := r.orderIDToID[orderID]
+	if !ok {
+		return domain.Payment{}, domain.ErrPaymentNotFound
 	}
 
 	payment, ok := r.payments[paymentID]
@@ -134,6 +163,7 @@ func (r *MemoryRepository) UpdatePayment(ctx context.Context, payment domain.Pay
 
 	cloned := clonePayment(payment)
 	r.payments[cloned.ID] = cloned
+	r.orderIDToID[cloned.OrderID] = cloned.ID
 
 	if newKey != "" {
 		r.idempotencyKeyToID[newKey] = cloned.ID

@@ -65,6 +65,17 @@ func (h *GRPCHandler) GetPaymentByID(ctx context.Context, req *paymentv1.GetPaym
 	}, nil
 }
 
+func (h *GRPCHandler) GetPaymentByOrderID(ctx context.Context, req *paymentv1.GetPaymentByOrderIDRequest) (*paymentv1.GetPaymentByOrderIDResponse, error) {
+	payment, err := h.service.GetPaymentByOrderID(ctx, req.GetOrderId())
+	if err != nil {
+		return nil, mapPaymentError(err)
+	}
+
+	return &paymentv1.GetPaymentByOrderIDResponse{
+		Payment: convertPaymentToProto(payment),
+	}, nil
+}
+
 func (h *GRPCHandler) CancelPayment(ctx context.Context, req *paymentv1.CancelPaymentRequest) (*paymentv1.CancelPaymentResponse, error) {
 	payment, err := h.service.CancelPayment(ctx, req.GetPaymentId(), req.GetReason())
 	if err != nil {

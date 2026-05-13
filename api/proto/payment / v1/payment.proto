@@ -7,6 +7,7 @@ option go_package = "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1
 service PaymentService {
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
   rpc GetPaymentByID(GetPaymentByIDRequest) returns (GetPaymentByIDResponse);
+  rpc GetPaymentByOrderID(GetPaymentByOrderIDRequest) returns (GetPaymentByOrderIDResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
 }
 
@@ -65,6 +66,14 @@ message GetPaymentByIDRequest {
 }
 
 message GetPaymentByIDResponse {
+  Payment payment = 1;
+}
+
+message GetPaymentByOrderIDRequest {
+  string order_id = 1;
+}
+
+message GetPaymentByOrderIDResponse {
   Payment payment = 1;
 }
 
