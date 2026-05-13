@@ -97,6 +97,28 @@ type GetPaymentByOrderIDResult struct {
 	PaymentMethod string
 }
 
+type ListPaymentsByCustomerInput struct {
+	CustomerID string
+	Page       int
+	PageSize   int
+}
+
+type PaymentResult struct {
+	PaymentID     string
+	OrderID       string
+	CustomerID    string
+	Status        string
+	Amount        Money
+	PaymentMethod string
+}
+
+type ListPaymentsByCustomerResult struct {
+	Payments []PaymentResult
+	Page     int
+	PageSize int
+	Total    int64
+}
+
 type CancelPaymentInput struct {
 	PaymentID string
 	Reason    string

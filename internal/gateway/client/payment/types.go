@@ -39,6 +39,19 @@ type GetPaymentByOrderIDResponse struct {
 	Payment *Payment
 }
 
+type ListPaymentsByCustomerRequest struct {
+	CustomerID string
+	Page       int
+	PageSize   int
+}
+
+type ListPaymentsByCustomerResponse struct {
+	Payments []Payment
+	Page     int
+	PageSize int
+	Total    int64
+}
+
 type CancelPaymentRequest struct {
 	PaymentID string
 	Reason    string

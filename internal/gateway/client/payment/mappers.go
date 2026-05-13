@@ -34,6 +34,17 @@ func mapProtoPayment(payment *paymentv1.Payment) *Payment {
 	}
 }
 
+func mapProtoPayments(payments []*paymentv1.Payment) []Payment {
+	converted := make([]Payment, 0, len(payments))
+	for _, payment := range payments {
+		if mapped := mapProtoPayment(payment); mapped != nil {
+			converted = append(converted, *mapped)
+		}
+	}
+
+	return converted
+}
+
 func mapProtoMoney(money *paymentv1.Money) Money {
 	if money == nil {
 		return Money{}

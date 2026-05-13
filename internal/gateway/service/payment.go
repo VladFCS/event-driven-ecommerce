@@ -90,6 +90,59 @@ func (s *GatewayService) GetPaymentByOrderID(ctx context.Context, in *GetPayment
 	}, nil
 }
 
+func (s *GatewayService) ListPaymentsByCustomer(ctx context.Context, in *ListPaymentsByCustomerInput) (*ListPaymentsByCustomerResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: list payments by customer request is nil", ErrInvalidInput)
+	}
+
+	customerID := strings.TrimSpace(in.CustomerID)
+	if customerID == "" {
+		return nil, fmt.Errorf("%w: customer id is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.readTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.readTimeout)
+	}
+	defer cancel()
+
+	paymentResp, err := s.paymentClient.ListPaymentsByCustomer(opCtx, &paymentclient.ListPaymentsByCustomerRequest{
+		CustomerID: customerID,
+		Page:       in.Page,
+		PageSize:   in.PageSize,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("payment list by customer", err)
+	}
+	if paymentResp == nil {
+		return nil, fmt.Errorf("%w: list payments response is empty", ErrDownstreamFailed)
+	}
+
+	result := &ListPaymentsByCustomerResult{
+		Payments: make([]PaymentResult, 0, len(paymentResp.Payments)),
+		Page:     paymentResp.Page,
+		PageSize: paymentResp.PageSize,
+		Total:    paymentResp.Total,
+	}
+
+	for _, payment := range paymentResp.Payments {
+		result.Payments = append(result.Payments, PaymentResult{
+			PaymentID:  payment.ID,
+			OrderID:    payment.OrderID,
+			CustomerID: payment.CustomerID,
+			Status:     payment.Status,
+			Amount: Money{
+				Currency:    payment.Amount.Currency,
+				AmountCents: payment.Amount.AmountCents,
+			},
+			PaymentMethod: payment.PaymentMethod,
+		})
+	}
+
+	return result, nil
+}
+
 func (s *GatewayService) CancelPayment(ctx context.Context, in *CancelPaymentInput) (*CancelPaymentResult, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: cancel payment request is nil", ErrInvalidInput)
