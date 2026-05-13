@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/domain"
@@ -73,6 +74,39 @@ func (h *GRPCHandler) GetPaymentByOrderID(ctx context.Context, req *paymentv1.Ge
 
 	return &paymentv1.GetPaymentByOrderIDResponse{
 		Payment: convertPaymentToProto(payment),
+	}, nil
+}
+
+func (h *GRPCHandler) ListPaymentsByCustomer(ctx context.Context, req *paymentv1.ListPaymentsByCustomerRequest) (*paymentv1.ListPaymentsByCustomerResponse, error) {
+	payments, total, err := h.service.ListPaymentsByCustomer(ctx, req.GetCustomerId(), req.GetPage(), req.GetPageSize())
+	if err != nil {
+		return nil, mapPaymentError(err)
+	}
+
+	page := req.GetPage()
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize := req.GetPageSize()
+	if pageSize <= 0 {
+		if total > math.MaxInt32 {
+			pageSize = math.MaxInt32
+		} else {
+			pageSize = int32(total)
+		}
+	}
+
+	protoPayments := make([]*paymentv1.Payment, 0, len(payments))
+	for _, payment := range payments {
+		protoPayments = append(protoPayments, convertPaymentToProto(payment))
+	}
+
+	return &paymentv1.ListPaymentsByCustomerResponse{
+		Payments: protoPayments,
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
 	}, nil
 }
 

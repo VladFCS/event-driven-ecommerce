@@ -8,6 +8,7 @@ service PaymentService {
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
   rpc GetPaymentByID(GetPaymentByIDRequest) returns (GetPaymentByIDResponse);
   rpc GetPaymentByOrderID(GetPaymentByOrderIDRequest) returns (GetPaymentByOrderIDResponse);
+  rpc ListPaymentsByCustomer(ListPaymentsByCustomerRequest) returns (ListPaymentsByCustomerResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
 }
 
@@ -75,6 +76,19 @@ message GetPaymentByOrderIDRequest {
 
 message GetPaymentByOrderIDResponse {
   Payment payment = 1;
+}
+
+message ListPaymentsByCustomerRequest {
+  string customer_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListPaymentsByCustomerResponse {
+  repeated Payment payments = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total = 4;
 }
 
 message CancelPaymentRequest {

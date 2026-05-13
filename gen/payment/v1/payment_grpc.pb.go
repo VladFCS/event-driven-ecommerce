@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PaymentService_CreatePayment_FullMethodName       = "/payment.v1.PaymentService/CreatePayment"
-	PaymentService_GetPaymentByID_FullMethodName      = "/payment.v1.PaymentService/GetPaymentByID"
-	PaymentService_GetPaymentByOrderID_FullMethodName = "/payment.v1.PaymentService/GetPaymentByOrderID"
-	PaymentService_CancelPayment_FullMethodName       = "/payment.v1.PaymentService/CancelPayment"
+	PaymentService_CreatePayment_FullMethodName          = "/payment.v1.PaymentService/CreatePayment"
+	PaymentService_GetPaymentByID_FullMethodName         = "/payment.v1.PaymentService/GetPaymentByID"
+	PaymentService_GetPaymentByOrderID_FullMethodName    = "/payment.v1.PaymentService/GetPaymentByOrderID"
+	PaymentService_ListPaymentsByCustomer_FullMethodName = "/payment.v1.PaymentService/ListPaymentsByCustomer"
+	PaymentService_CancelPayment_FullMethodName          = "/payment.v1.PaymentService/CancelPayment"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -32,6 +33,7 @@ type PaymentServiceClient interface {
 	CreatePayment(ctx context.Context, in *CreatePaymentRequest, opts ...grpc.CallOption) (*CreatePaymentResponse, error)
 	GetPaymentByID(ctx context.Context, in *GetPaymentByIDRequest, opts ...grpc.CallOption) (*GetPaymentByIDResponse, error)
 	GetPaymentByOrderID(ctx context.Context, in *GetPaymentByOrderIDRequest, opts ...grpc.CallOption) (*GetPaymentByOrderIDResponse, error)
+	ListPaymentsByCustomer(ctx context.Context, in *ListPaymentsByCustomerRequest, opts ...grpc.CallOption) (*ListPaymentsByCustomerResponse, error)
 	CancelPayment(ctx context.Context, in *CancelPaymentRequest, opts ...grpc.CallOption) (*CancelPaymentResponse, error)
 }
 
@@ -73,6 +75,16 @@ func (c *paymentServiceClient) GetPaymentByOrderID(ctx context.Context, in *GetP
 	return out, nil
 }
 
+func (c *paymentServiceClient) ListPaymentsByCustomer(ctx context.Context, in *ListPaymentsByCustomerRequest, opts ...grpc.CallOption) (*ListPaymentsByCustomerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPaymentsByCustomerResponse)
+	err := c.cc.Invoke(ctx, PaymentService_ListPaymentsByCustomer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *paymentServiceClient) CancelPayment(ctx context.Context, in *CancelPaymentRequest, opts ...grpc.CallOption) (*CancelPaymentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CancelPaymentResponse)
@@ -90,6 +102,7 @@ type PaymentServiceServer interface {
 	CreatePayment(context.Context, *CreatePaymentRequest) (*CreatePaymentResponse, error)
 	GetPaymentByID(context.Context, *GetPaymentByIDRequest) (*GetPaymentByIDResponse, error)
 	GetPaymentByOrderID(context.Context, *GetPaymentByOrderIDRequest) (*GetPaymentByOrderIDResponse, error)
+	ListPaymentsByCustomer(context.Context, *ListPaymentsByCustomerRequest) (*ListPaymentsByCustomerResponse, error)
 	CancelPayment(context.Context, *CancelPaymentRequest) (*CancelPaymentResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
@@ -109,6 +122,9 @@ func (UnimplementedPaymentServiceServer) GetPaymentByID(context.Context, *GetPay
 }
 func (UnimplementedPaymentServiceServer) GetPaymentByOrderID(context.Context, *GetPaymentByOrderIDRequest) (*GetPaymentByOrderIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPaymentByOrderID not implemented")
+}
+func (UnimplementedPaymentServiceServer) ListPaymentsByCustomer(context.Context, *ListPaymentsByCustomerRequest) (*ListPaymentsByCustomerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPaymentsByCustomer not implemented")
 }
 func (UnimplementedPaymentServiceServer) CancelPayment(context.Context, *CancelPaymentRequest) (*CancelPaymentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelPayment not implemented")
@@ -188,6 +204,24 @@ func _PaymentService_GetPaymentByOrderID_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_ListPaymentsByCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPaymentsByCustomerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).ListPaymentsByCustomer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_ListPaymentsByCustomer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).ListPaymentsByCustomer(ctx, req.(*ListPaymentsByCustomerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PaymentService_CancelPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelPaymentRequest)
 	if err := dec(in); err != nil {
@@ -224,6 +258,10 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPaymentByOrderID",
 			Handler:    _PaymentService_GetPaymentByOrderID_Handler,
+		},
+		{
+			MethodName: "ListPaymentsByCustomer",
+			Handler:    _PaymentService_ListPaymentsByCustomer_Handler,
 		},
 		{
 			MethodName: "CancelPayment",

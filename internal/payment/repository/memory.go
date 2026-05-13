@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"sync"
 
@@ -108,6 +109,53 @@ func (r *MemoryRepository) GetPaymentByOrderID(ctx context.Context, orderID stri
 	}
 
 	return clonePayment(payment), nil
+}
+
+func (r *MemoryRepository) ListPaymentsByCustomer(ctx context.Context, customerID string, page, pageSize int32) ([]domain.Payment, int64, error) {
+	_ = ctx
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	customerID = strings.TrimSpace(customerID)
+	if customerID == "" {
+		return nil, 0, domain.ErrInvalidPayment
+	}
+
+	filtered := make([]domain.Payment, 0)
+	for _, payment := range r.payments {
+		if payment.CustomerID == customerID {
+			filtered = append(filtered, clonePayment(payment))
+		}
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].CreatedAt.Equal(filtered[j].CreatedAt) {
+			return filtered[i].ID < filtered[j].ID
+		}
+
+		return filtered[i].CreatedAt.Before(filtered[j].CreatedAt)
+	})
+
+	total := int64(len(filtered))
+	if pageSize <= 0 {
+		pageSize = int32(len(filtered))
+	}
+	if page <= 0 {
+		page = 1
+	}
+
+	start := int((page - 1) * pageSize)
+	if start >= len(filtered) {
+		return []domain.Payment{}, total, nil
+	}
+
+	end := start + int(pageSize)
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	return filtered[start:end], total, nil
 }
 
 func (r *MemoryRepository) GetPaymentByIdempotencyKey(ctx context.Context, key string) (domain.Payment, error) {

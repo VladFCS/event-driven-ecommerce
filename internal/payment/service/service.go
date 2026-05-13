@@ -75,6 +75,14 @@ func (s *PaymentService) GetPaymentByOrderID(ctx context.Context, orderID string
 	return s.repository.GetPaymentByOrderID(ctx, orderID)
 }
 
+func (s *PaymentService) ListPaymentsByCustomer(ctx context.Context, customerID string, page, pageSize int32) ([]domain.Payment, int64, error) {
+	if strings.TrimSpace(customerID) == "" {
+		return nil, 0, domain.ErrInvalidPayment
+	}
+
+	return s.repository.ListPaymentsByCustomer(ctx, customerID, page, pageSize)
+}
+
 func (s *PaymentService) CancelPayment(ctx context.Context, paymentID string, reason string) (domain.Payment, error) {
 	if strings.TrimSpace(paymentID) == "" {
 		return domain.Payment{}, domain.ErrInvalidPaymentID
