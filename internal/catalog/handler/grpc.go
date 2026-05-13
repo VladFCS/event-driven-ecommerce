@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 
 	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/domain"
@@ -31,16 +32,41 @@ func (h *GRPCHandler) GetProductByID(ctx context.Context, req *catalogv1.GetProd
 		return nil, mapCatalogError(err)
 	}
 
-	res := &catalogv1.Product{
-		ProductId:   product.ID,
-		Name:        product.Name,
-		Description: product.Description,
-		PriceCents:  product.PriceCents,
-		Currency:    product.Currency,
+	return &catalogv1.GetProductByIDResponse{
+		Product: convertProductToProto(product),
+	}, nil
+}
+
+func (h *GRPCHandler) ListProducts(ctx context.Context, req *catalogv1.ListProductsRequest) (*catalogv1.ListProductsResponse, error) {
+	products, total, err := h.service.ListProducts(ctx, req.GetPage(), req.GetPageSize())
+	if err != nil {
+		return nil, mapCatalogError(err)
 	}
 
-	return &catalogv1.GetProductByIDResponse{
-		Product: res,
+	page := req.GetPage()
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize := req.GetPageSize()
+	if pageSize <= 0 {
+		if total > math.MaxInt32 {
+			pageSize = math.MaxInt32
+		} else {
+			pageSize = int32(total)
+		}
+	}
+
+	protoProducts := make([]*catalogv1.Product, 0, len(products))
+	for _, product := range products {
+		protoProducts = append(protoProducts, convertProductToProto(product))
+	}
+
+	return &catalogv1.ListProductsResponse{
+		Products: protoProducts,
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
 	}, nil
 }
 
@@ -60,19 +86,21 @@ func (h *GRPCHandler) CreateProduct(ctx context.Context, req *catalogv1.CreatePr
 		return nil, mapCatalogError(err)
 	}
 
-	res := &catalogv1.Product{
+	h.logger.InfoContext(ctx, "product created", slog.String("product_id", product.ID))
+
+	return &catalogv1.CreateProductResponse{
+		Product: convertProductToProto(product),
+	}, nil
+}
+
+func convertProductToProto(product domain.Product) *catalogv1.Product {
+	return &catalogv1.Product{
 		ProductId:   product.ID,
 		Name:        product.Name,
 		Description: product.Description,
 		PriceCents:  product.PriceCents,
 		Currency:    product.Currency,
 	}
-
-	h.logger.InfoContext(ctx, "product created", slog.String("product_id", product.ID))
-
-	return &catalogv1.CreateProductResponse{
-		Product: res,
-	}, nil
 }
 
 func mapCatalogError(err error) error {
