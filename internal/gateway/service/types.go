@@ -113,6 +113,22 @@ type GetProductByIDInput struct {
 	ProductID string
 }
 
+type CreateProductInput struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
+}
+
+type CreateProductResult struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
+}
+
 type GetProductByIDResult struct {
 	ProductID   string
 	Name        string
