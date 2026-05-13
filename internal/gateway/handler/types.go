@@ -186,6 +186,10 @@ type GetProductByIDURIRequest struct {
 	ProductID string `uri:"product_id" binding:"required"`
 }
 
+type DeleteProductURIRequest struct {
+	ProductID string `uri:"product_id" binding:"required"`
+}
+
 type ListProductsQueryRequest struct {
 	Page     int `form:"page"`
 	PageSize int `form:"page_size"`

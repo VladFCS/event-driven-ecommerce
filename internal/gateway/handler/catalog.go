@@ -35,6 +35,23 @@ func (h *HTTPHandler) CreateProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, toCreateProductResponse(resp))
 }
 
+func (h *HTTPHandler) DeleteProduct(c *gin.Context) {
+	var req DeleteProductURIRequest
+	if err := c.ShouldBindUri(&req); err != nil {
+		writeBindError(c, err, req, "invalid request path parameters")
+		return
+	}
+
+	if err := h.gatewayService.DeleteProduct(c.Request.Context(), &gatewayservice.DeleteProductInput{
+		ProductID: req.ProductID,
+	}); err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (h *HTTPHandler) GetProductByID(c *gin.Context) {
 	var req GetProductByIDURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
