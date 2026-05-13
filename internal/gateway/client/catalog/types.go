@@ -11,3 +11,15 @@ type Product struct {
 type GetProductByIDResponse struct {
 	Product *Product
 }
+
+type ListProductsRequest struct {
+	Page     int
+	PageSize int
+}
+
+type ListProductsResponse struct {
+	Products []Product
+	Page     int
+	PageSize int
+	Total    int64
+}

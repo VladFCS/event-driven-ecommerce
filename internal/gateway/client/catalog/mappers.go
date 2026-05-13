@@ -15,3 +15,14 @@ func mapProtoProduct(product *catalogv1.Product) *Product {
 		Currency:    product.GetCurrency().String(),
 	}
 }
+
+func mapProtoProducts(products []*catalogv1.Product) []Product {
+	converted := make([]Product, 0, len(products))
+	for _, product := range products {
+		if mapped := mapProtoProduct(product); mapped != nil {
+			converted = append(converted, *mapped)
+		}
+	}
+
+	return converted
+}

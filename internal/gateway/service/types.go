@@ -109,6 +109,26 @@ type GetProductByIDResult struct {
 	Currency    string
 }
 
+type ListProductsInput struct {
+	Page     int
+	PageSize int
+}
+
+type ProductResult struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
+}
+
+type ListProductsResult struct {
+	Products []ProductResult
+	Page     int
+	PageSize int
+	Total    int64
+}
+
 type GetStockByProductIDInput struct {
 	ProductID string
 }

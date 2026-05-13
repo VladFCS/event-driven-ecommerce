@@ -36,3 +36,24 @@ func (c *GRPCClient) GetProductByID(ctx context.Context, productID string) (*Get
 		Product: mapProtoProduct(grpcResp.GetProduct()),
 	}, nil
 }
+
+func (c *GRPCClient) ListProducts(ctx context.Context, req *ListProductsRequest) (*ListProductsResponse, error) {
+	if req == nil {
+		return nil, ErrListProductsRequestNil
+	}
+
+	grpcResp, err := c.grpcClient.ListProducts(requestid.WithOutgoingMetadata(ctx), &catalogv1.ListProductsRequest{
+		Page:     int32(req.Page),
+		PageSize: int32(req.PageSize),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListProductsResponse{
+		Products: mapProtoProducts(grpcResp.GetProducts()),
+		Page:     int(grpcResp.GetPage()),
+		PageSize: int(grpcResp.GetPageSize()),
+		Total:    grpcResp.GetTotal(),
+	}, nil
+}

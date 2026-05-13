@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	catalogclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/catalog"
 )
 
 func (s *GatewayService) GetProductByID(ctx context.Context, in *GetProductByIDInput) (*GetProductByIDResult, error) {
@@ -39,4 +41,51 @@ func (s *GatewayService) GetProductByID(ctx context.Context, in *GetProductByIDI
 		PriceCents:  product.PriceCents,
 		Currency:    product.Currency,
 	}, nil
+}
+
+func (s *GatewayService) ListProducts(ctx context.Context, in *ListProductsInput) (*ListProductsResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: list products request is nil", ErrInvalidInput)
+	}
+
+	if in.Page < 0 || in.PageSize < 0 {
+		return nil, fmt.Errorf("%w: page and page size must be non-negative", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.readTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.readTimeout)
+	}
+	defer cancel()
+
+	resp, err := s.catalogClient.ListProducts(opCtx, &catalogclient.ListProductsRequest{
+		Page:     in.Page,
+		PageSize: in.PageSize,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("catalog products list", err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("%w: list products response is empty", ErrDownstreamFailed)
+	}
+
+	result := &ListProductsResult{
+		Products: make([]ProductResult, 0, len(resp.Products)),
+		Page:     resp.Page,
+		PageSize: resp.PageSize,
+		Total:    resp.Total,
+	}
+
+	for _, product := range resp.Products {
+		result.Products = append(result.Products, ProductResult{
+			ProductID:   product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			PriceCents:  product.PriceCents,
+			Currency:    product.Currency,
+		})
+	}
+
+	return result, nil
 }

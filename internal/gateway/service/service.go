@@ -31,6 +31,7 @@ type PaymentClient interface {
 
 type CatalogClient interface {
 	GetProductByID(ctx context.Context, productID string) (*catalogclient.GetProductByIDResponse, error)
+	ListProducts(ctx context.Context, req *catalogclient.ListProductsRequest) (*catalogclient.ListProductsResponse, error)
 }
 
 type ReadinessStatus struct {
