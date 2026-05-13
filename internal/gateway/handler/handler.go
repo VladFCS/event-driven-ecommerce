@@ -15,6 +15,7 @@ type GatewayService interface {
 	GetOrderByID(ctx context.Context, in *gatewayservice.GetOrderByIDInput) (*gatewayservice.GetOrderByIDResult, error)
 	GetPaymentByID(ctx context.Context, in *gatewayservice.GetPaymentByIDInput) (*gatewayservice.GetPaymentByIDResult, error)
 	GetPaymentByOrderID(ctx context.Context, in *gatewayservice.GetPaymentByOrderIDInput) (*gatewayservice.GetPaymentByOrderIDResult, error)
+	ListPaymentsByCustomer(ctx context.Context, in *gatewayservice.ListPaymentsByCustomerInput) (*gatewayservice.ListPaymentsByCustomerResult, error)
 	GetProductByID(ctx context.Context, in *gatewayservice.GetProductByIDInput) (*gatewayservice.GetProductByIDResult, error)
 	ListProducts(ctx context.Context, in *gatewayservice.ListProductsInput) (*gatewayservice.ListProductsResult, error)
 	GetStockByProductID(ctx context.Context, in *gatewayservice.GetStockByProductIDInput) (*gatewayservice.GetStockByProductIDResult, error)
@@ -41,6 +42,7 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.POST("/payments/:payment_id/cancel", h.CancelPayment)
 	r.GET("/orders/:order_id", h.GetOrderByID)
 	r.GET("/customers/:customer_id/orders", h.ListOrdersByCustomer)
+	r.GET("/customers/:customer_id/payments", h.ListPaymentsByCustomer)
 
 	r.GET("/payments/:payment_id", h.GetPaymentByID)
 	r.GET("/payments/order/:order_id", h.GetPaymentByOrderID)

@@ -43,6 +43,15 @@ type ListOrdersByCustomerQueryRequest struct {
 	PageSize int `form:"page_size"`
 }
 
+type ListPaymentsByCustomerURIRequest struct {
+	CustomerID string `uri:"customer_id" binding:"required"`
+}
+
+type ListPaymentsByCustomerQueryRequest struct {
+	Page     int `form:"page"`
+	PageSize int `form:"page_size"`
+}
+
 type GetOrderByIDResponse struct {
 	OrderID         string              `json:"order_id"`
 	CustomerID      string              `json:"customer_id"`
@@ -157,6 +166,13 @@ type GetPaymentByOrderIDResponse struct {
 	Status        string        `json:"status"`
 	Amount        MoneyResponse `json:"amount"`
 	PaymentMethod string        `json:"payment_method"`
+}
+
+type ListPaymentsByCustomerResponse struct {
+	Payments []GetPaymentByIDResponse `json:"payments"`
+	Page     int                      `json:"page"`
+	PageSize int                      `json:"page_size"`
+	Total    int64                    `json:"total"`
 }
 
 type CancelPaymentResponse struct {
