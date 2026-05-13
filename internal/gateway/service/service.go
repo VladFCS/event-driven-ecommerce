@@ -19,6 +19,7 @@ type OrderClient interface {
 }
 
 type InventoryClient interface {
+	GetStockByProductID(ctx context.Context, req *inventoryclient.GetStockByProductIDRequest) (*inventoryclient.GetStockByProductIDResponse, error)
 	ReserveStock(ctx context.Context, req *inventoryclient.ReserveStockRequest) (*inventoryclient.ReserveStockResponse, error)
 	ReleaseStock(ctx context.Context, req *inventoryclient.ReleaseStockRequest) (*inventoryclient.ReleaseStockResponse, error)
 }

@@ -108,3 +108,13 @@ type GetProductByIDResult struct {
 	PriceCents  int64
 	Currency    string
 }
+
+type GetStockByProductIDInput struct {
+	ProductID string
+}
+
+type GetStockByProductIDResult struct {
+	ProductID string
+	Available int64
+	Reserved  int64
+}
