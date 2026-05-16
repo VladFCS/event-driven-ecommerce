@@ -112,6 +112,17 @@ type CreateProductRequest struct {
 	Currency    string `json:"currency" binding:"required"`
 }
 
+type UpdateProductURIRequest struct {
+	ProductID string `uri:"product_id" binding:"required"`
+}
+
+type UpdateProductRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	PriceCents  *int64  `json:"price_cents"`
+	Currency    *string `json:"currency"`
+}
+
 type OrderItemResponse struct {
 	ProductID   string        `json:"product_id"`
 	SKU         string        `json:"sku"`
@@ -211,6 +222,14 @@ type ListProductsResponse struct {
 }
 
 type CreateProductResponse struct {
+	ProductID   string `json:"product_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents"`
+	Currency    string `json:"currency"`
+}
+
+type UpdateProductResponse struct {
 	ProductID   string `json:"product_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

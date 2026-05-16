@@ -35,6 +35,34 @@ func (h *HTTPHandler) CreateProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, toCreateProductResponse(resp))
 }
 
+func (h *HTTPHandler) UpdateProduct(c *gin.Context) {
+	var uriReq UpdateProductURIRequest
+	if err := c.ShouldBindUri(&uriReq); err != nil {
+		writeBindError(c, err, uriReq, "invalid request path parameters")
+		return
+	}
+
+	var req UpdateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeBindError(c, err, req, "invalid request body")
+		return
+	}
+
+	resp, err := h.gatewayService.UpdateProduct(c.Request.Context(), &gatewayservice.UpdateProductInput{
+		ProductID:   uriReq.ProductID,
+		Name:        req.Name,
+		Description: req.Description,
+		PriceCents:  req.PriceCents,
+		Currency:    req.Currency,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toUpdateProductResponse(resp))
+}
+
 func (h *HTTPHandler) DeleteProduct(c *gin.Context) {
 	var req DeleteProductURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
@@ -136,6 +164,16 @@ func toListProductsResponse(result *gatewayservice.ListProductsResult) *ListProd
 
 func toCreateProductResponse(result *gatewayservice.CreateProductResult) *CreateProductResponse {
 	return &CreateProductResponse{
+		ProductID:   result.ProductID,
+		Name:        result.Name,
+		Description: result.Description,
+		PriceCents:  result.PriceCents,
+		Currency:    result.Currency,
+	}
+}
+
+func toUpdateProductResponse(result *gatewayservice.UpdateProductResult) *UpdateProductResponse {
+	return &UpdateProductResponse{
 		ProductID:   result.ProductID,
 		Name:        result.Name,
 		Description: result.Description,
