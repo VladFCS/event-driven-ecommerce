@@ -18,3 +18,14 @@ type Product struct {
 	PriceCents  int64
 	Currency    catalogv1.Currency
 }
+
+type ProductPatch struct {
+	Name        *string
+	Description *string
+	PriceCents  *int64
+	Currency    *catalogv1.Currency
+}
+
+func (p ProductPatch) Empty() bool {
+	return p.Name == nil && p.Description == nil && p.PriceCents == nil && p.Currency == nil
+}

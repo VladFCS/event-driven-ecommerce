@@ -79,6 +79,32 @@ func (r *MemoryRepository) CreateProduct(ctx context.Context, product domain.Pro
 	return product, nil
 }
 
+func (r *MemoryRepository) UpdateProduct(ctx context.Context, productID string, patch domain.ProductPatch) (domain.Product, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	product, ok := r.product[productID]
+	if !ok {
+		return domain.Product{}, domain.ErrProductNotFound
+	}
+
+	if patch.Name != nil {
+		product.Name = *patch.Name
+	}
+	if patch.Description != nil {
+		product.Description = *patch.Description
+	}
+	if patch.PriceCents != nil {
+		product.PriceCents = *patch.PriceCents
+	}
+	if patch.Currency != nil {
+		product.Currency = *patch.Currency
+	}
+
+	r.product[productID] = product
+	return product, nil
+}
+
 func (r *MemoryRepository) DeleteProduct(ctx context.Context, productID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
