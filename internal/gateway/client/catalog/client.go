@@ -47,6 +47,50 @@ func (c *GRPCClient) CreateProduct(ctx context.Context, req *CreateProductReques
 	}, nil
 }
 
+func (c *GRPCClient) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*UpdateProductResponse, error) {
+	if req == nil {
+		return nil, ErrUpdateProductRequestNil
+	}
+
+	productID := strings.TrimSpace(req.ProductID)
+	if productID == "" {
+		return nil, ErrProductIDRequired
+	}
+
+	grpcReq := &catalogv1.UpdateProductRequest{
+		ProductId: productID,
+	}
+
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		grpcReq.Name = &name
+	}
+	if req.Description != nil {
+		description := strings.TrimSpace(*req.Description)
+		grpcReq.Description = &description
+	}
+	if req.PriceCents != nil {
+		priceCents := *req.PriceCents
+		grpcReq.PriceCents = &priceCents
+	}
+	if req.Currency != nil {
+		currency, err := parseCurrency(*req.Currency)
+		if err != nil {
+			return nil, err
+		}
+		grpcReq.Currency = &currency
+	}
+
+	grpcResp, err := c.grpcClient.UpdateProduct(requestid.WithOutgoingMetadata(ctx), grpcReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateProductResponse{
+		Product: mapProtoProduct(grpcResp.GetProduct()),
+	}, nil
+}
+
 func (c *GRPCClient) GetProductByID(ctx context.Context, productID string) (*GetProductByIDResponse, error) {
 	productID = strings.TrimSpace(productID)
 	if productID == "" {

@@ -20,6 +20,18 @@ type CreateProductResponse struct {
 	Product *Product
 }
 
+type UpdateProductRequest struct {
+	ProductID   string
+	Name        *string
+	Description *string
+	PriceCents  *int64
+	Currency    *string
+}
+
+type UpdateProductResponse struct {
+	Product *Product
+}
+
 type GetProductByIDResponse struct {
 	Product *Product
 }
