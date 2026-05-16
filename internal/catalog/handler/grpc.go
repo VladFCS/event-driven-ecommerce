@@ -93,6 +93,37 @@ func (h *GRPCHandler) CreateProduct(ctx context.Context, req *catalogv1.CreatePr
 	}, nil
 }
 
+func (h *GRPCHandler) UpdateProduct(ctx context.Context, req *catalogv1.UpdateProductRequest) (*catalogv1.UpdateProductResponse, error) {
+	patch := domain.ProductPatch{}
+	if req.Name != nil {
+		name := req.GetName()
+		patch.Name = &name
+	}
+	if req.Description != nil {
+		description := req.GetDescription()
+		patch.Description = &description
+	}
+	if req.PriceCents != nil {
+		priceCents := req.GetPriceCents()
+		patch.PriceCents = &priceCents
+	}
+	if req.Currency != nil {
+		currency := req.GetCurrency()
+		patch.Currency = &currency
+	}
+
+	product, err := h.service.UpdateProduct(ctx, req.GetProductId(), patch)
+	if err != nil {
+		return nil, mapCatalogError(err)
+	}
+
+	h.logger.InfoContext(ctx, "product updated", slog.String("product_id", product.ID))
+
+	return &catalogv1.UpdateProductResponse{
+		Product: convertProductToProto(product),
+	}, nil
+}
+
 func (h *GRPCHandler) DeleteProduct(ctx context.Context, req *catalogv1.DeleteProductRequest) (*catalogv1.DeleteProductResponse, error) {
 	if err := h.service.DeleteProduct(ctx, req.GetProductId()); err != nil {
 		return nil, mapCatalogError(err)

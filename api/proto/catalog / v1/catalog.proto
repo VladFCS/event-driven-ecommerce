@@ -8,6 +8,7 @@ service CatalogService {
   rpc GetProductByID(GetProductByIDRequest) returns (GetProductByIDResponse);
   rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
   rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
 }
 
@@ -50,6 +51,18 @@ message CreateProductRequest {
 }
 
 message CreateProductResponse {
+  Product product = 1;
+}
+
+message UpdateProductRequest {
+  string product_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional int64 price_cents = 4;
+  optional Currency currency = 5;
+}
+
+message UpdateProductResponse {
   Product product = 1;
 }
 
