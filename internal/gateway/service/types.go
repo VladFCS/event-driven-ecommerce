@@ -164,6 +164,22 @@ type CreateProductResult struct {
 	Currency    string
 }
 
+type UpdateProductInput struct {
+	ProductID   string
+	Name        *string
+	Description *string
+	PriceCents  *int64
+	Currency    *string
+}
+
+type UpdateProductResult struct {
+	ProductID   string
+	Name        string
+	Description string
+	PriceCents  int64
+	Currency    string
+}
+
 type DeleteProductInput struct {
 	ProductID string
 }

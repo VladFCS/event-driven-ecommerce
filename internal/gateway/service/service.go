@@ -34,6 +34,7 @@ type PaymentClient interface {
 
 type CatalogClient interface {
 	CreateProduct(ctx context.Context, req *catalogclient.CreateProductRequest) (*catalogclient.CreateProductResponse, error)
+	UpdateProduct(ctx context.Context, req *catalogclient.UpdateProductRequest) (*catalogclient.UpdateProductResponse, error)
 	DeleteProduct(ctx context.Context, productID string) error
 	GetProductByID(ctx context.Context, productID string) (*catalogclient.GetProductByIDResponse, error)
 	ListProducts(ctx context.Context, req *catalogclient.ListProductsRequest) (*catalogclient.ListProductsResponse, error)

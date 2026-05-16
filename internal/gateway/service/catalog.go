@@ -62,6 +62,87 @@ func (s *GatewayService) CreateProduct(ctx context.Context, in *CreateProductInp
 	}, nil
 }
 
+func (s *GatewayService) UpdateProduct(ctx context.Context, in *UpdateProductInput) (*UpdateProductResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: update product request is nil", ErrInvalidInput)
+	}
+
+	productID := strings.TrimSpace(in.ProductID)
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product id is required", ErrInvalidInput)
+	}
+
+	var (
+		name        *string
+		description *string
+		priceCents  *int64
+		currency    *string
+	)
+
+	if in.Name != nil {
+		trimmedName := strings.TrimSpace(*in.Name)
+		if trimmedName == "" {
+			return nil, fmt.Errorf("%w: product name is required", ErrInvalidInput)
+		}
+		name = &trimmedName
+	}
+
+	if in.Description != nil {
+		trimmedDescription := strings.TrimSpace(*in.Description)
+		description = &trimmedDescription
+	}
+
+	if in.PriceCents != nil {
+		if *in.PriceCents <= 0 {
+			return nil, fmt.Errorf("%w: price cents must be greater than 0", ErrInvalidInput)
+		}
+		value := *in.PriceCents
+		priceCents = &value
+	}
+
+	if in.Currency != nil {
+		normalizedCurrency, err := normalizeCurrency(*in.Currency)
+		if err != nil {
+			return nil, err
+		}
+		currency = &normalizedCurrency
+	}
+
+	if name == nil && description == nil && priceCents == nil && currency == nil {
+		return nil, fmt.Errorf("%w: at least one field must be provided", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.checkoutTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.checkoutTimeout)
+	}
+	defer cancel()
+
+	resp, err := s.catalogClient.UpdateProduct(opCtx, &catalogclient.UpdateProductRequest{
+		ProductID:   productID,
+		Name:        name,
+		Description: description,
+		PriceCents:  priceCents,
+		Currency:    currency,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("catalog product update", err)
+	}
+	if resp == nil || resp.Product == nil {
+		return nil, fmt.Errorf("%w: update product response is empty", ErrDownstreamFailed)
+	}
+
+	product := resp.Product
+	return &UpdateProductResult{
+		ProductID:   product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		PriceCents:  product.PriceCents,
+		Currency:    product.Currency,
+	}, nil
+}
+
 func (s *GatewayService) GetProductByID(ctx context.Context, in *GetProductByIDInput) (*GetProductByIDResult, error) {
 	if in == nil {
 		return nil, fmt.Errorf("%w: get product by id request is nil", ErrInvalidInput)
