@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	gatewayservice "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/service"
@@ -27,14 +28,23 @@ type GatewayService interface {
 
 type HTTPHandler struct {
 	gatewayService GatewayService
+	logger         *slog.Logger
 }
 
-func NewHTTPHandler(gatewayService GatewayService) *HTTPHandler {
-	return &HTTPHandler{gatewayService: gatewayService}
+func NewHTTPHandler(gatewayService GatewayService, logger *slog.Logger) *HTTPHandler {
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	return &HTTPHandler{
+		gatewayService: gatewayService,
+		logger:         logger,
+	}
 }
 
 func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.Use(requestIDMiddleware())
+	r.Use(requestLoggingMiddleware(h.logger))
 
 	r.GET("/healthz", h.Healthz)
 	r.GET("/readyz", h.Readyz)

@@ -66,10 +66,10 @@ func main() {
 		gatewayservice.WithInventoryClient(inventorySvcClient),
 		gatewayservice.WithPaymentClient(paymentSvcClient),
 	)
-	httpHandler := handler.NewHTTPHandler(gatewaySvc)
+	httpHandler := handler.NewHTTPHandler(gatewaySvc, logger)
 
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Recovery())
 	httpHandler.Register(router)
 
 	server := &http.Server{
