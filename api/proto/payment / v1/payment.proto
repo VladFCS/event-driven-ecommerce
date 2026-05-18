@@ -10,6 +10,7 @@ service PaymentService {
   rpc GetPaymentByOrderID(GetPaymentByOrderIDRequest) returns (GetPaymentByOrderIDResponse);
   rpc ListPaymentsByCustomer(ListPaymentsByCustomerRequest) returns (ListPaymentsByCustomerResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
+  rpc CapturePayment(CapturePaymentRequest) returns (CapturePaymentResponse);
 }
 
 enum PaymentStatus {
@@ -97,5 +98,13 @@ message CancelPaymentRequest {
 }
 
 message CancelPaymentResponse {
+  Payment payment = 1;
+}
+
+message CapturePaymentRequest {
+  string payment_id = 1;
+}
+
+message CapturePaymentResponse {
   Payment payment = 1;
 }
