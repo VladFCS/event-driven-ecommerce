@@ -142,3 +142,25 @@ func (c *GRPCClient) CancelPayment(ctx context.Context, req *CancelPaymentReques
 		Payment: mapProtoPayment(grpcResp.GetPayment()),
 	}, nil
 }
+
+func (c *GRPCClient) CapturePayment(ctx context.Context, req *CapturePaymentRequest) (*CapturePaymentResponse, error) {
+	if req == nil {
+		return nil, ErrCapturePaymentRequestNil
+	}
+
+	paymentID := strings.TrimSpace(req.PaymentID)
+	if paymentID == "" {
+		return nil, ErrPaymentIDRequired
+	}
+
+	grpcResp, err := c.grpcClient.CapturePayment(requestid.WithOutgoingMetadata(ctx), &paymentv1.CapturePaymentRequest{
+		PaymentId: paymentID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &CapturePaymentResponse{
+		Payment: mapProtoPayment(grpcResp.GetPayment()),
+	}, nil
+}

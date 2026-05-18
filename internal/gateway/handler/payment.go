@@ -121,6 +121,24 @@ func (h *HTTPHandler) CancelPayment(c *gin.Context) {
 	c.JSON(http.StatusOK, toCancelPaymentResponse(resp))
 }
 
+func (h *HTTPHandler) CapturePayment(c *gin.Context) {
+	var uriReq CapturePaymentURIRequest
+	if err := c.ShouldBindUri(&uriReq); err != nil {
+		writeBindError(c, err, uriReq, "invalid request path parameters")
+		return
+	}
+
+	resp, err := h.gatewayService.CapturePayment(c.Request.Context(), &gatewayservice.CapturePaymentInput{
+		PaymentID: uriReq.PaymentID,
+	})
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toCapturePaymentResponse(resp))
+}
+
 func toGetPaymentByIDResponse(result *gatewayservice.GetPaymentByIDResult) *GetPaymentByIDResponse {
 	return &GetPaymentByIDResponse{
 		PaymentID:  result.PaymentID,
@@ -137,6 +155,15 @@ func toGetPaymentByIDResponse(result *gatewayservice.GetPaymentByIDResult) *GetP
 
 func toCancelPaymentResponse(result *gatewayservice.CancelPaymentResult) *CancelPaymentResponse {
 	return &CancelPaymentResponse{
+		PaymentID:  result.PaymentID,
+		OrderID:    result.OrderID,
+		CustomerID: result.CustomerID,
+		Status:     result.Status,
+	}
+}
+
+func toCapturePaymentResponse(result *gatewayservice.CapturePaymentResult) *CapturePaymentResponse {
+	return &CapturePaymentResponse{
 		PaymentID:  result.PaymentID,
 		OrderID:    result.OrderID,
 		CustomerID: result.CustomerID,

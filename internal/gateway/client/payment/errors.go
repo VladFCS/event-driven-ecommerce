@@ -5,6 +5,7 @@ import "errors"
 var (
 	ErrCreatePaymentRequestNil       = errors.New("create payment request is nil")
 	ErrCancelPaymentRequestNil       = errors.New("cancel payment request is nil")
+	ErrCapturePaymentRequestNil      = errors.New("capture payment request is nil")
 	ErrGetPaymentByIDRequestNil      = errors.New("get payment by id request is nil")
 	ErrGetPaymentByOrderIDRequestNil = errors.New("get payment by order id request is nil")
 	ErrListPaymentsRequestNil        = errors.New("list payments by customer request is nil")

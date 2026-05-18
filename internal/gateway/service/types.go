@@ -131,6 +131,17 @@ type CancelPaymentResult struct {
 	Status     string
 }
 
+type CapturePaymentInput struct {
+	PaymentID string
+}
+
+type CapturePaymentResult struct {
+	PaymentID  string
+	OrderID    string
+	CustomerID string
+	Status     string
+}
+
 type ListOrdersByCustomerInput struct {
 	CustomerID string
 	Page       int

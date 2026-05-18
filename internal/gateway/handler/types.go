@@ -193,6 +193,13 @@ type CancelPaymentResponse struct {
 	Status     string `json:"status"`
 }
 
+type CapturePaymentResponse struct {
+	PaymentID  string `json:"payment_id"`
+	OrderID    string `json:"order_id"`
+	CustomerID string `json:"customer_id"`
+	Status     string `json:"status"`
+}
+
 type GetProductByIDURIRequest struct {
 	ProductID string `uri:"product_id" binding:"required"`
 }
@@ -245,4 +252,8 @@ type GetStockByProductIDResponse struct {
 	ProductID string `json:"product_id"`
 	Available int64  `json:"available"`
 	Reserved  int64  `json:"reserved"`
+}
+
+type CapturePaymentURIRequest struct {
+	PaymentID string `uri:"payment_id" binding:"required"`
 }

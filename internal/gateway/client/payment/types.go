@@ -61,6 +61,14 @@ type CancelPaymentResponse struct {
 	Payment *Payment
 }
 
+type CapturePaymentRequest struct {
+	PaymentID string
+}
+
+type CapturePaymentResponse struct {
+	Payment *Payment
+}
+
 type CreatePaymentResponse struct {
 	Payment *Payment
 }

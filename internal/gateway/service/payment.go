@@ -184,3 +184,38 @@ func (s *GatewayService) CancelPayment(ctx context.Context, in *CancelPaymentInp
 		Status:     payment.Status,
 	}, nil
 }
+
+func (s *GatewayService) CapturePayment(ctx context.Context, in *CapturePaymentInput) (*CapturePaymentResult, error) {
+	if in == nil {
+		return nil, fmt.Errorf("%w: capture payment request is nil", ErrInvalidInput)
+	}
+	paymentID := strings.TrimSpace(in.PaymentID)
+	if paymentID == "" {
+		return nil, fmt.Errorf("%w: payment id is required", ErrInvalidInput)
+	}
+
+	opCtx := ctx
+	cancel := func() {}
+	if s.checkoutTimeout > 0 {
+		opCtx, cancel = context.WithTimeout(ctx, s.checkoutTimeout)
+	}
+	defer cancel()
+
+	paymentResp, err := s.paymentClient.CapturePayment(opCtx, &paymentclient.CapturePaymentRequest{
+		PaymentID: paymentID,
+	})
+	if err != nil {
+		return nil, wrapDownstreamError("payment capture", err)
+	}
+	if paymentResp == nil || paymentResp.Payment == nil {
+		return nil, fmt.Errorf("%w: capture payment response is empty", ErrDownstreamFailed)
+	}
+
+	payment := paymentResp.Payment
+	return &CapturePaymentResult{
+		PaymentID:  payment.ID,
+		OrderID:    payment.OrderID,
+		CustomerID: payment.CustomerID,
+		Status:     payment.Status,
+	}, nil
+}
