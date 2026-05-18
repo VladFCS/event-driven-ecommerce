@@ -32,6 +32,14 @@ func (h *HTTPHandler) GetPaymentByID(c *gin.Context) {
 }
 
 func (h *HTTPHandler) GetPaymentByOrderID(c *gin.Context) {
+	h.getPaymentByOrderID(c)
+}
+
+func (h *HTTPHandler) GetOrderPayment(c *gin.Context) {
+	h.getPaymentByOrderID(c)
+}
+
+func (h *HTTPHandler) getPaymentByOrderID(c *gin.Context) {
 	var req GetPaymentByOrderIDURIRequest
 	if err := c.ShouldBindUri(&req); err != nil {
 		writeBindError(c, err, req, "invalid request path parameters")

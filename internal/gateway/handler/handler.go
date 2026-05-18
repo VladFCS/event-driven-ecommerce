@@ -56,6 +56,7 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.POST("/orders/:order_id/cancel", h.CancelOrder)
 	r.POST("/payments/:payment_id/cancel", h.CancelPayment)
 	r.GET("/orders/:order_id", h.GetOrderByID)
+	r.GET("/orders/:order_id/payment", h.GetOrderPayment)
 	r.GET("/customers/:customer_id/orders", h.ListOrdersByCustomer)
 	r.GET("/customers/:customer_id/payments", h.ListPaymentsByCustomer)
 
