@@ -15,6 +15,7 @@ var (
 	ErrInvalidIdempotencyKey       = errors.New("invalid idempotency key")
 	ErrIdempotencyKeyAlreadyExists = errors.New("payment already exists for idempotency key")
 	ErrPaymentCannotBeCancelled    = errors.New("payment cannot be cancelled in current status")
+	ErrPaymentCannotBeCaptured     = errors.New("payment cannot be captured in current status")
 )
 
 type Money struct {

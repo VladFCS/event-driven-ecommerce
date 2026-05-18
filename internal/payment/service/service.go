@@ -108,6 +108,29 @@ func (s *PaymentService) CancelPayment(ctx context.Context, paymentID string, re
 	}
 }
 
+func (s *PaymentService) CapturePayment(ctx context.Context, paymentID string) (domain.Payment, error) {
+	if strings.TrimSpace(paymentID) == "" {
+		return domain.Payment{}, domain.ErrInvalidPaymentID
+	}
+
+	payment, err := s.repository.GetPaymentByID(ctx, paymentID)
+	if err != nil {
+		return domain.Payment{}, err
+	}
+
+	switch payment.Status {
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_CAPTURED:
+		return payment, nil
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING,
+		paymentv1.PaymentStatus_PAYMENT_STATUS_AUTHORIZED:
+		payment.Status = paymentv1.PaymentStatus_PAYMENT_STATUS_CAPTURED
+		payment.UpdatedAt = time.Now()
+		return s.repository.UpdatePayment(ctx, payment)
+	default:
+		return domain.Payment{}, domain.ErrPaymentCannotBeCaptured
+	}
+}
+
 func validateCreatePayment(payment domain.Payment) error {
 	if strings.TrimSpace(payment.OrderID) == "" || strings.TrimSpace(payment.CustomerID) == "" {
 		return domain.ErrInvalidPayment

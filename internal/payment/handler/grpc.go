@@ -130,6 +130,27 @@ func (h *GRPCHandler) CancelPayment(ctx context.Context, req *paymentv1.CancelPa
 	}, nil
 }
 
+func (h *GRPCHandler) CapturePayment(ctx context.Context, req *paymentv1.CapturePaymentRequest) (*paymentv1.CapturePaymentResponse, error) {
+	payment, err := h.service.CapturePayment(ctx, req.GetPaymentId())
+	if err != nil {
+		return nil, mapPaymentError(err)
+	}
+
+	h.logger.InfoContext(
+		ctx,
+		"payment captured",
+		requestIDAttr(ctx),
+		slog.String("payment_id", payment.ID),
+		slog.String("order_id", payment.OrderID),
+		slog.String("customer_id", payment.CustomerID),
+		slog.String("status", payment.Status.String()),
+	)
+
+	return &paymentv1.CapturePaymentResponse{
+		Payment: convertPaymentToProto(payment),
+	}, nil
+}
+
 func convertMoney(money *paymentv1.Money) domain.Money {
 	if money == nil {
 		return domain.Money{}
@@ -171,6 +192,8 @@ func mapPaymentError(err error) error {
 		errors.Is(err, domain.ErrIdempotencyKeyAlreadyExists):
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, domain.ErrPaymentCannotBeCancelled):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, domain.ErrPaymentCannotBeCaptured):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	default:
 		return status.Error(codes.Internal, "internal server error")
