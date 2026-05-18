@@ -69,7 +69,6 @@ func main() {
 	httpHandler := handler.NewHTTPHandler(gatewaySvc, logger)
 
 	router := gin.New()
-	router.Use(gin.Recovery())
 	httpHandler.Register(router)
 
 	server := &http.Server{

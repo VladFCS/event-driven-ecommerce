@@ -44,8 +44,11 @@ func NewHTTPHandler(gatewayService GatewayService, logger *slog.Logger) *HTTPHan
 
 func (h *HTTPHandler) Register(r *gin.Engine) {
 	r.Use(requestIDMiddleware())
+	r.Use(requestMetricsMiddleware())
 	r.Use(requestLoggingMiddleware(h.logger))
+	r.Use(gin.Recovery())
 
+	r.GET("/metrics", metricsHandler())
 	r.GET("/healthz", h.Healthz)
 	r.GET("/readyz", h.Readyz)
 
