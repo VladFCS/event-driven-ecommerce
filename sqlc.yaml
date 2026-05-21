@@ -3,6 +3,19 @@ version: "2"
 sql:
   - engine: "postgresql"
     schema:
+      - "db/schema/catalog.sql"
+    queries:
+      - "db/queries/catalog.sql"
+    gen:
+      go:
+        package: "catalogdb"
+        out: "internal/catalog/repository/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_interface: false
+  - engine: "postgresql"
+    schema:
       - "db/schema/payment.sql"
     queries:
       - "db/queries/payment.sql"
