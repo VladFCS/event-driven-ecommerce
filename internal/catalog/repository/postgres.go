@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -39,6 +40,50 @@ func (r *PostgresRepository) GetProductByID(ctx context.Context, productID strin
 	return mapDBProduct(row)
 }
 
+func (r *PostgresRepository) ListProducts(ctx context.Context, page, pageSize int32) ([]domain.Product, int64, error) {
+	if page < 0 || pageSize < 0 {
+		return nil, 0, domain.ErrInvalidProduct
+	}
+
+	total, err := r.queries.CountCatalogProducts(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count catalog products from postgres: %w", err)
+	}
+
+	if total == 0 {
+		return []domain.Product{}, 0, nil
+	}
+
+	if page <= 0 {
+		page = 1
+	}
+
+	limit := int64(pageSize)
+	if pageSize <= 0 {
+		limit = total
+	}
+
+	offset := int64(page-1) * limit
+	if offset >= total {
+		return []domain.Product{}, total, nil
+	}
+
+	rows, err := r.queries.ListCatalogProducts(ctx, catalogdb.ListCatalogProductsParams{
+		Limit:  clampInt64ToInt32(limit),
+		Offset: clampInt64ToInt32(offset),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("list catalog products from postgres: %w", err)
+	}
+
+	products, err := mapDBProducts(rows)
+	if err != nil {
+		return nil, 0, fmt.Errorf("map listed catalog products from postgres: %w", err)
+	}
+
+	return products, total, nil
+}
+
 func mapDBProduct(row catalogdb.CatalogProduct) (domain.Product, error) {
 	currency, err := mapDBCurrency(row.Currency)
 	if err != nil {
@@ -54,6 +99,20 @@ func mapDBProduct(row catalogdb.CatalogProduct) (domain.Product, error) {
 	}, nil
 }
 
+func mapDBProducts(rows []catalogdb.CatalogProduct) ([]domain.Product, error) {
+	products := make([]domain.Product, 0, len(rows))
+	for _, row := range rows {
+		product, err := mapDBProduct(row)
+		if err != nil {
+			return nil, err
+		}
+
+		products = append(products, product)
+	}
+
+	return products, nil
+}
+
 func mapDBCurrency(value int32) (catalogv1.Currency, error) {
 	currency := catalogv1.Currency(value)
 	switch currency {
@@ -62,4 +121,15 @@ func mapDBCurrency(value int32) (catalogv1.Currency, error) {
 	default:
 		return catalogv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("unknown catalog currency value: %d", value)
 	}
+}
+
+func clampInt64ToInt32(value int64) int32 {
+	if value > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+
+	return int32(value)
 }
