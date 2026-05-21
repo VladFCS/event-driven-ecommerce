@@ -104,6 +104,54 @@ func (r *PostgresRepository) CreateProduct(ctx context.Context, product domain.P
 	return mapped, nil
 }
 
+func (r *PostgresRepository) UpdateProduct(ctx context.Context, productID string, patch domain.ProductPatch) (domain.Product, error) {
+	if strings.TrimSpace(productID) == "" || patch.Empty() {
+		return domain.Product{}, domain.ErrInvalidProduct
+	}
+
+	if err := validateProductPatch(patch); err != nil {
+		return domain.Product{}, err
+	}
+
+	product, err := r.GetProductByID(ctx, productID)
+	if err != nil {
+		return domain.Product{}, err
+	}
+
+	if patch.Name != nil {
+		product.Name = strings.TrimSpace(*patch.Name)
+	}
+	if patch.Description != nil {
+		product.Description = strings.TrimSpace(*patch.Description)
+	}
+	if patch.PriceCents != nil {
+		product.PriceCents = *patch.PriceCents
+	}
+	if patch.Currency != nil {
+		product.Currency = *patch.Currency
+	}
+
+	if err := validateProduct(product); err != nil {
+		return domain.Product{}, err
+	}
+
+	row, err := r.queries.UpdateCatalogProduct(ctx, toUpdateCatalogProductParams(product))
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Product{}, domain.ErrProductNotFound
+		}
+
+		return domain.Product{}, fmt.Errorf("update catalog product in postgres: %w", err)
+	}
+
+	mapped, err := mapDBProduct(row)
+	if err != nil {
+		return domain.Product{}, fmt.Errorf("map updated catalog product from postgres: %w", err)
+	}
+
+	return mapped, nil
+}
+
 func mapDBProduct(row catalogdb.CatalogProduct) (domain.Product, error) {
 	currency, err := mapDBCurrency(row.Currency)
 	if err != nil {
@@ -165,6 +213,20 @@ func validateProduct(product domain.Product) error {
 	return nil
 }
 
+func validateProductPatch(patch domain.ProductPatch) error {
+	if patch.Name != nil && strings.TrimSpace(*patch.Name) == "" {
+		return domain.ErrInvalidProduct
+	}
+	if patch.PriceCents != nil && *patch.PriceCents <= 0 {
+		return domain.ErrInvalidProduct
+	}
+	if patch.Currency != nil && *patch.Currency == catalogv1.Currency_CURRENCY_UNSPECIFIED {
+		return domain.ErrInvalidProduct
+	}
+
+	return nil
+}
+
 func toCreateCatalogProductParams(product domain.Product) catalogdb.CreateCatalogProductParams {
 	now := currentTimestamp()
 
@@ -176,6 +238,17 @@ func toCreateCatalogProductParams(product domain.Product) catalogdb.CreateCatalo
 		Currency:    int32(product.Currency),
 		CreatedAt:   now,
 		UpdatedAt:   now,
+	}
+}
+
+func toUpdateCatalogProductParams(product domain.Product) catalogdb.UpdateCatalogProductParams {
+	return catalogdb.UpdateCatalogProductParams{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		PriceCents:  product.PriceCents,
+		Currency:    int32(product.Currency),
+		UpdatedAt:   currentTimestamp(),
 	}
 }
 
