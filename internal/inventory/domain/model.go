@@ -22,5 +22,4 @@ var (
 	ErrInvalidStock        = errors.New("invalid stock")
 	ErrInsufficientStock   = errors.New("insufficient stock")
 	ErrReservationNotFound = errors.New("reservation not found")
-	ErrInvalidProductID = errors.New("invalid product")
 )

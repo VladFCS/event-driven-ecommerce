@@ -27,7 +27,7 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 
 func (r *PostgresRepository) GetStockByProductID(ctx context.Context, productID string) (domain.Stock, error) {
 	if strings.TrimSpace(productID) == "" {
-		return domain.Stock{}, domain.ErrInvalidProductID
+		return domain.Stock{}, domain.ErrInvalidStock
 	}
 	row, err := r.queries.GetStockByProductID(ctx, productID)
 	if err != nil {

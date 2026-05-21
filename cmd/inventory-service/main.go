@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/repository"
@@ -41,22 +41,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	repository := repository.NewMemoryRepository([]domain.Stock{
-		{
-			ProductID:         "p-100",
-			AvailableQuantity: 20,
-			ReservedQuantity:  0,
-			TotalQuantity:     20,
-		},
-		{
-			ProductID:         "p-200",
-			AvailableQuantity: 35,
-			ReservedQuantity:  0,
-			TotalQuantity:     35,
-		},
-	})
+	pool, closePool, err := newInventoryDatabasePool(log)
+	if err != nil {
+		log.Error("failed to configure inventory repository", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer closePool()
 
-	service := service.NewInventoryService(repository)
+	inventoryRepository := repository.NewPostgresRepository(pool)
+
+	service := service.NewInventoryService(inventoryRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	publisher, closePublisher, err := newInventoryEventPublisher(log)
@@ -128,6 +122,30 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newInventoryDatabasePool(logger *slog.Logger) (*pgxpool.Pool, func(), error) {
+	databaseURL := strings.TrimSpace(getenv("INVENTORY_DATABASE_URL", ""))
+	if databaseURL == "" {
+		return nil, nil, errors.New("INVENTORY_DATABASE_URL is required")
+	}
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create database pool: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	logger.Info("connected to inventory database")
+
+	return pool, pool.Close, nil
 }
 
 func newInventoryEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
