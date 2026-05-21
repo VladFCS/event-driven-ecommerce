@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/domain"
@@ -84,6 +86,24 @@ func (r *PostgresRepository) ListProducts(ctx context.Context, page, pageSize in
 	return products, total, nil
 }
 
+func (r *PostgresRepository) CreateProduct(ctx context.Context, product domain.Product) (domain.Product, error) {
+	if err := validateProduct(product); err != nil {
+		return domain.Product{}, err
+	}
+
+	row, err := r.queries.CreateCatalogProduct(ctx, toCreateCatalogProductParams(product))
+	if err != nil {
+		return domain.Product{}, fmt.Errorf("create catalog product in postgres: %w", err)
+	}
+
+	mapped, err := mapDBProduct(row)
+	if err != nil {
+		return domain.Product{}, fmt.Errorf("map created catalog product from postgres: %w", err)
+	}
+
+	return mapped, nil
+}
+
 func mapDBProduct(row catalogdb.CatalogProduct) (domain.Product, error) {
 	currency, err := mapDBCurrency(row.Currency)
 	if err != nil {
@@ -132,4 +152,36 @@ func clampInt64ToInt32(value int64) int32 {
 	}
 
 	return int32(value)
+}
+
+func validateProduct(product domain.Product) error {
+	if strings.TrimSpace(product.ID) == "" ||
+		strings.TrimSpace(product.Name) == "" ||
+		product.PriceCents <= 0 ||
+		product.Currency == catalogv1.Currency_CURRENCY_UNSPECIFIED {
+		return domain.ErrInvalidProduct
+	}
+
+	return nil
+}
+
+func toCreateCatalogProductParams(product domain.Product) catalogdb.CreateCatalogProductParams {
+	now := currentTimestamp()
+
+	return catalogdb.CreateCatalogProductParams{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		PriceCents:  product.PriceCents,
+		Currency:    int32(product.Currency),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+}
+
+func currentTimestamp() pgtype.Timestamptz {
+	return pgtype.Timestamptz{
+		Time:  time.Now().UTC(),
+		Valid: true,
+	}
 }
