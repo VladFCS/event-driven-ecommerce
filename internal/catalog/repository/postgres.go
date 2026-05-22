@@ -152,6 +152,22 @@ func (r *PostgresRepository) UpdateProduct(ctx context.Context, productID string
 	return mapped, nil
 }
 
+func (r *PostgresRepository) DeleteProduct(ctx context.Context, productID string) error {
+	if strings.TrimSpace(productID) == "" {
+		return domain.ErrInvalidProduct
+	}
+
+	if _, err := r.queries.DeleteCatalogProduct(ctx, productID); err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.ErrProductNotFound
+		}
+
+		return fmt.Errorf("delete catalog product from postgres: %w", err)
+	}
+
+	return nil
+}
+
 func mapDBProduct(row catalogdb.CatalogProduct) (domain.Product, error) {
 	currency, err := mapDBCurrency(row.Currency)
 	if err != nil {
