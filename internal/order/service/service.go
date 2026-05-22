@@ -30,9 +30,21 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 	}
 
 	var totalAmount int64
+	totalCurrency := orderv1.Currency_CURRENCY_UNSPECIFIED
 
 	for i, item := range order.Items {
-		if strings.TrimSpace(item.ProductID) == "" || item.Quantity <= 0 || item.UnitPrice.AmountCents <= 0 {
+		item.ProductID = strings.TrimSpace(item.ProductID)
+		order.Items[i].ProductID = item.ProductID
+
+		if item.ProductID == "" ||
+			item.Quantity <= 0 ||
+			item.UnitPrice.AmountCents <= 0 ||
+			item.UnitPrice.Currency == orderv1.Currency_CURRENCY_UNSPECIFIED {
+			return domain.Order{}, domain.ErrInvalidOrder
+		}
+		if totalCurrency == orderv1.Currency_CURRENCY_UNSPECIFIED {
+			totalCurrency = item.UnitPrice.Currency
+		} else if item.UnitPrice.Currency != totalCurrency {
 			return domain.Order{}, domain.ErrInvalidOrder
 		}
 
@@ -46,7 +58,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 	}
 
 	order.TotalAmount = domain.Money{
-		Currency:    order.Items[0].UnitPrice.Currency,
+		Currency:    totalCurrency,
 		AmountCents: totalAmount,
 	}
 
