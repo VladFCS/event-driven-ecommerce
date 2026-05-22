@@ -8,11 +8,12 @@ import (
 )
 
 var (
-	ErrOrderNotFound      = errors.New("order not found")
-	ErrInvalidOrder       = errors.New("invalid order")
-	ErrOrderAlreadyExists = errors.New("order already exists")
-	ErrInvalidOrderID     = errors.New("invalid order id")
-	ErrInvalidCustomerID  = errors.New("invalid customer id")
+	ErrOrderNotFound               = errors.New("order not found")
+	ErrInvalidOrder                = errors.New("invalid order")
+	ErrOrderAlreadyExists          = errors.New("order already exists")
+	ErrIdempotencyKeyAlreadyExists = errors.New("order already exists for idempotency key")
+	ErrInvalidOrderID              = errors.New("invalid order id")
+	ErrInvalidCustomerID           = errors.New("invalid customer id")
 )
 
 type Money struct {
@@ -46,6 +47,7 @@ type PaymentDetails struct {
 type Order struct {
 	ID              string
 	CustomerID      string
+	IdempotencyKey  string
 	Items           []OrderItem
 	TotalAmount     Money
 	Status          orderv1.OrderStatus

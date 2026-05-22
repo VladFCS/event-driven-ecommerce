@@ -31,6 +31,7 @@ func NewGRPCHandler(service *service.OrderService, logger *slog.Logger) *GRPCHan
 func (h *GRPCHandler) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) (*orderv1.CreateOrderResponse, error) {
 	order, err := h.service.CreateOrder(ctx, domain.Order{
 		CustomerID:      req.GetCustomerId(),
+		IdempotencyKey:  req.GetIdempotencyKey(),
 		Items:           convertCreateOrderItems(req.GetItems()),
 		ShippingAddress: convertAddress(req.GetShippingAddress()),
 		Payment:         convertPaymentDetails(req.GetPayment()),

@@ -91,6 +91,32 @@ func (r *PostgresRepository) GetOrderByID(ctx context.Context, orderID string) (
 	return mapDBOrder(row, items)
 }
 
+func (r *PostgresRepository) GetOrderByIdempotencyKey(ctx context.Context, key string) (domain.Order, error) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return domain.Order{}, domain.ErrInvalidOrder
+	}
+
+	row, err := r.queries.GetOrderByIdempotencyKey(ctx, pgtype.Text{
+		String: key,
+		Valid:  true,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Order{}, domain.ErrOrderNotFound
+		}
+
+		return domain.Order{}, fmt.Errorf("get order by idempotency key from postgres: %w", err)
+	}
+
+	items, err := r.queries.ListOrderItemsByOrderID(ctx, row.ID)
+	if err != nil {
+		return domain.Order{}, fmt.Errorf("list order items by idempotency key from postgres: %w", err)
+	}
+
+	return mapDBOrder(row, items)
+}
+
 func (r *PostgresRepository) ListOrdersByCustomer(ctx context.Context, customerID string, page, pageSize int32) ([]domain.Order, int64, error) {
 	total, err := r.queries.CountOrdersByCustomer(ctx, customerID)
 	if err != nil {
@@ -258,6 +284,7 @@ func toCreateOrderParams(order domain.Order) orderdb.CreateOrderParams {
 	return orderdb.CreateOrderParams{
 		ID:                   base.ID,
 		CustomerID:           base.CustomerID,
+		IdempotencyKey:       base.IdempotencyKey,
 		TotalAmountCurrency:  base.TotalAmountCurrency,
 		TotalAmountCents:     base.TotalAmountCents,
 		Status:               base.Status,
@@ -280,6 +307,7 @@ func toUpdateOrderParams(order domain.Order) orderdb.UpdateOrderParams {
 	return orderdb.UpdateOrderParams{
 		ID:                   base.ID,
 		CustomerID:           base.CustomerID,
+		IdempotencyKey:       base.IdempotencyKey,
 		TotalAmountCurrency:  base.TotalAmountCurrency,
 		TotalAmountCents:     base.TotalAmountCents,
 		Status:               base.Status,
@@ -299,6 +327,7 @@ func toUpdateOrderParams(order domain.Order) orderdb.UpdateOrderParams {
 type orderDBParams struct {
 	ID                   string
 	CustomerID           string
+	IdempotencyKey       pgtype.Text
 	TotalAmountCurrency  string
 	TotalAmountCents     int64
 	Status               string
@@ -315,7 +344,7 @@ type orderDBParams struct {
 }
 
 func toOrderDBParams(order domain.Order) orderDBParams {
-	return orderDBParams{
+	params := orderDBParams{
 		ID:                   order.ID,
 		CustomerID:           order.CustomerID,
 		TotalAmountCurrency:  order.TotalAmount.Currency.String(),
@@ -338,6 +367,15 @@ func toOrderDBParams(order domain.Order) orderDBParams {
 			Valid: !order.UpdatedAt.IsZero(),
 		},
 	}
+
+	if key := strings.TrimSpace(order.IdempotencyKey); key != "" {
+		params.IdempotencyKey = pgtype.Text{
+			String: key,
+			Valid:  true,
+		}
+	}
+
+	return params
 }
 
 func mapCreateOrderError(err error) error {
@@ -353,6 +391,8 @@ func mapCreateOrderError(err error) error {
 	switch pgErr.ConstraintName {
 	case "orders_pkey":
 		return domain.ErrOrderAlreadyExists
+	case "orders_idempotency_key_key":
+		return domain.ErrIdempotencyKeyAlreadyExists
 	default:
 		return fmt.Errorf("create order in postgres: %w", err)
 	}
@@ -462,6 +502,9 @@ func mapDBOrder(row orderdb.Order, itemRows []orderdb.OrderItem) (domain.Order, 
 	}
 	if row.UpdatedAt.Valid {
 		order.UpdatedAt = row.UpdatedAt.Time
+	}
+	if row.IdempotencyKey.Valid {
+		order.IdempotencyKey = row.IdempotencyKey.String
 	}
 
 	return order, nil

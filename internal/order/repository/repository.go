@@ -9,6 +9,7 @@ import (
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order domain.Order) (domain.Order, error)
 	GetOrderByID(ctx context.Context, orderID string) (domain.Order, error)
+	GetOrderByIdempotencyKey(ctx context.Context, key string) (domain.Order, error)
 	ListOrdersByCustomer(ctx context.Context, customerID string, page, pageSize int32) ([]domain.Order, int64, error)
 	UpdateOrder(ctx context.Context, order domain.Order) (domain.Order, error)
 }
