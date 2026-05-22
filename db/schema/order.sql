@@ -1,6 +1,7 @@
 CREATE TABLE orders (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL,
+    idempotency_key TEXT UNIQUE,
     total_amount_currency TEXT NOT NULL,
     total_amount_cents BIGINT NOT NULL CHECK (total_amount_cents > 0),
     status TEXT NOT NULL,

@@ -2,6 +2,7 @@
 INSERT INTO orders (
     id,
     customer_id,
+    idempotency_key,
     total_amount_currency,
     total_amount_cents,
     status,
@@ -16,7 +17,7 @@ INSERT INTO orders (
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 )
 RETURNING *;
 
@@ -40,6 +41,11 @@ INSERT INTO order_items (
 SELECT *
 FROM orders
 WHERE id = $1;
+
+-- name: GetOrderByIdempotencyKey :one
+SELECT *
+FROM orders
+WHERE idempotency_key = $1;
 
 -- name: ListOrderItemsByOrderID :many
 SELECT *
@@ -69,19 +75,20 @@ ORDER BY order_id ASC, item_position ASC;
 UPDATE orders
 SET
     customer_id = $2,
-    total_amount_currency = $3,
-    total_amount_cents = $4,
-    status = $5,
-    shipping_country = $6,
-    shipping_city = $7,
-    shipping_street = $8,
-    shipping_postal_code = $9,
-    shipping_house = $10,
-    shipping_apartment = $11,
-    payment_method = $12,
-    payment_method_details = $13,
-    created_at = $14,
-    updated_at = $15
+    idempotency_key = $3,
+    total_amount_currency = $4,
+    total_amount_cents = $5,
+    status = $6,
+    shipping_country = $7,
+    shipping_city = $8,
+    shipping_street = $9,
+    shipping_postal_code = $10,
+    shipping_house = $11,
+    shipping_apartment = $12,
+    payment_method = $13,
+    payment_method_details = $14,
+    created_at = $15,
+    updated_at = $16
 WHERE id = $1
 RETURNING *;
 
