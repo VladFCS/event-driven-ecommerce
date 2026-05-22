@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/service"
@@ -27,24 +31,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	repository := repository.NewMemoryRepository([]domain.Product{
-		{
-			ID:          "p-100",
-			Name:        "Mechanical Keyboard",
-			Description: "Hot-swappable mechanical keyboard",
-			PriceCents:  12999,
-			Currency:    catalogv1.Currency_CURRENCY_USD,
-		},
-		{
-			ID:          "p-200",
-			Name:        "Wireless Mouse",
-			Description: "Ergonomic wireless mouse",
-			PriceCents:  5999,
-			Currency:    catalogv1.Currency_CURRENCY_USD,
-		},
-	})
+	productRepository, closeRepository, err := newCatalogRepository(log)
+	if err != nil {
+		log.Error("failed to configure catalog repository", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer closeRepository()
 
-	service := service.NewCatalogService(repository)
+	service := service.NewCatalogService(productRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer()
@@ -79,4 +73,28 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newCatalogRepository(logger *slog.Logger) (repository.ProductRepository, func(), error) {
+	databaseURL := strings.TrimSpace(getenv("CATALOG_DATABASE_URL", ""))
+	if databaseURL == "" {
+		return nil, nil, errors.New("CATALOG_DATABASE_URL is required")
+	}
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect to postgres: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, nil, fmt.Errorf("ping postgres: %w", err)
+	}
+
+	logger.Info("configured postgres catalog repository")
+
+	return repository.NewPostgresRepository(pool), pool.Close, nil
 }

@@ -138,7 +138,7 @@ build-gateway: ## Build gateway-service binary
 	GOCACHE=$(GOCACHE) $(GO) build $(GOFLAGS) -o "$(BIN_DIR)/gateway-service" $(GATEWAY_CMD)
 
 run-catalog: ## Run catalog-service
-	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(CATALOG_CMD)
+	CATALOG_DATABASE_URL=$(CATALOG_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(CATALOG_CMD)
 
 run-inventory: ## Run inventory-service
 	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
