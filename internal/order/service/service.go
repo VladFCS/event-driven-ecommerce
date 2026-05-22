@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,8 +23,20 @@ func NewOrderService(repository repository.OrderRepository) *OrderService {
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (domain.Order, error) {
-	if strings.TrimSpace(order.CustomerID) == "" || len(order.Items) == 0 {
+	order.CustomerID = strings.TrimSpace(order.CustomerID)
+	order.IdempotencyKey = strings.TrimSpace(order.IdempotencyKey)
+
+	if order.CustomerID == "" || len(order.Items) == 0 {
 		return domain.Order{}, domain.ErrInvalidOrder
+	}
+	if order.IdempotencyKey != "" {
+		existing, err := s.repository.GetOrderByIdempotencyKey(ctx, order.IdempotencyKey)
+		switch {
+		case err == nil:
+			return existing, nil
+		case !errors.Is(err, domain.ErrOrderNotFound):
+			return domain.Order{}, err
+		}
 	}
 	if strings.TrimSpace(order.ID) == "" {
 		order.ID = newOrderID()
@@ -68,7 +81,16 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 
 	// Order creation succeeds once the order and its outbox event are committed together.
 	// Kafka delivery is handled asynchronously by the outbox dispatcher.
-	return s.repository.CreateOrder(ctx, order)
+	created, err := s.repository.CreateOrder(ctx, order)
+	if err == nil {
+		return created, nil
+	}
+
+	if order.IdempotencyKey != "" && errors.Is(err, domain.ErrIdempotencyKeyAlreadyExists) {
+		return s.repository.GetOrderByIdempotencyKey(ctx, order.IdempotencyKey)
+	}
+
+	return domain.Order{}, err
 }
 
 func (s *OrderService) GetOrderByID(ctx context.Context, orderID string) (domain.Order, error) {
