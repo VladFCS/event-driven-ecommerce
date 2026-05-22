@@ -11,6 +11,7 @@ import (
 type Order struct {
 	ID                   string             `json:"id"`
 	CustomerID           string             `json:"customer_id"`
+	IdempotencyKey       pgtype.Text        `json:"idempotency_key"`
 	TotalAmountCurrency  string             `json:"total_amount_currency"`
 	TotalAmountCents     int64              `json:"total_amount_cents"`
 	Status               string             `json:"status"`

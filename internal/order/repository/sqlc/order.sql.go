@@ -84,6 +84,7 @@ const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (
     id,
     customer_id,
+    idempotency_key,
     total_amount_currency,
     total_amount_cents,
     status,
@@ -98,14 +99,15 @@ INSERT INTO orders (
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 )
-RETURNING id, customer_id, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
 `
 
 type CreateOrderParams struct {
 	ID                   string             `json:"id"`
 	CustomerID           string             `json:"customer_id"`
+	IdempotencyKey       pgtype.Text        `json:"idempotency_key"`
 	TotalAmountCurrency  string             `json:"total_amount_currency"`
 	TotalAmountCents     int64              `json:"total_amount_cents"`
 	Status               string             `json:"status"`
@@ -125,6 +127,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	row := q.db.QueryRow(ctx, createOrder,
 		arg.ID,
 		arg.CustomerID,
+		arg.IdempotencyKey,
 		arg.TotalAmountCurrency,
 		arg.TotalAmountCents,
 		arg.Status,
@@ -143,6 +146,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	err := row.Scan(
 		&i.ID,
 		&i.CustomerID,
+		&i.IdempotencyKey,
 		&i.TotalAmountCurrency,
 		&i.TotalAmountCents,
 		&i.Status,
@@ -269,7 +273,7 @@ func (q *Queries) DeleteOrderItemsByOrderID(ctx context.Context, orderID string)
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, customer_id, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
 FROM orders
 WHERE id = $1
 `
@@ -280,6 +284,37 @@ func (q *Queries) GetOrderByID(ctx context.Context, id string) (Order, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.CustomerID,
+		&i.IdempotencyKey,
+		&i.TotalAmountCurrency,
+		&i.TotalAmountCents,
+		&i.Status,
+		&i.ShippingCountry,
+		&i.ShippingCity,
+		&i.ShippingStreet,
+		&i.ShippingPostalCode,
+		&i.ShippingHouse,
+		&i.ShippingApartment,
+		&i.PaymentMethod,
+		&i.PaymentMethodDetails,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrderByIdempotencyKey = `-- name: GetOrderByIdempotencyKey :one
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+FROM orders
+WHERE idempotency_key = $1
+`
+
+func (q *Queries) GetOrderByIdempotencyKey(ctx context.Context, idempotencyKey pgtype.Text) (Order, error) {
+	row := q.db.QueryRow(ctx, getOrderByIdempotencyKey, idempotencyKey)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.IdempotencyKey,
 		&i.TotalAmountCurrency,
 		&i.TotalAmountCents,
 		&i.Status,
@@ -395,7 +430,7 @@ func (q *Queries) ListOrderItemsByOrderIDs(ctx context.Context, dollar_1 []strin
 }
 
 const listOrdersByCustomer = `-- name: ListOrdersByCustomer :many
-SELECT id, customer_id, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
 FROM orders
 WHERE customer_id = $1
 ORDER BY created_at ASC, id ASC
@@ -420,6 +455,7 @@ func (q *Queries) ListOrdersByCustomer(ctx context.Context, arg ListOrdersByCust
 		if err := rows.Scan(
 			&i.ID,
 			&i.CustomerID,
+			&i.IdempotencyKey,
 			&i.TotalAmountCurrency,
 			&i.TotalAmountCents,
 			&i.Status,
@@ -486,26 +522,28 @@ const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
 SET
     customer_id = $2,
-    total_amount_currency = $3,
-    total_amount_cents = $4,
-    status = $5,
-    shipping_country = $6,
-    shipping_city = $7,
-    shipping_street = $8,
-    shipping_postal_code = $9,
-    shipping_house = $10,
-    shipping_apartment = $11,
-    payment_method = $12,
-    payment_method_details = $13,
-    created_at = $14,
-    updated_at = $15
+    idempotency_key = $3,
+    total_amount_currency = $4,
+    total_amount_cents = $5,
+    status = $6,
+    shipping_country = $7,
+    shipping_city = $8,
+    shipping_street = $9,
+    shipping_postal_code = $10,
+    shipping_house = $11,
+    shipping_apartment = $12,
+    payment_method = $13,
+    payment_method_details = $14,
+    created_at = $15,
+    updated_at = $16
 WHERE id = $1
-RETURNING id, customer_id, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
 `
 
 type UpdateOrderParams struct {
 	ID                   string             `json:"id"`
 	CustomerID           string             `json:"customer_id"`
+	IdempotencyKey       pgtype.Text        `json:"idempotency_key"`
 	TotalAmountCurrency  string             `json:"total_amount_currency"`
 	TotalAmountCents     int64              `json:"total_amount_cents"`
 	Status               string             `json:"status"`
@@ -525,6 +563,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 	row := q.db.QueryRow(ctx, updateOrder,
 		arg.ID,
 		arg.CustomerID,
+		arg.IdempotencyKey,
 		arg.TotalAmountCurrency,
 		arg.TotalAmountCents,
 		arg.Status,
@@ -543,6 +582,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 	err := row.Scan(
 		&i.ID,
 		&i.CustomerID,
+		&i.IdempotencyKey,
 		&i.TotalAmountCurrency,
 		&i.TotalAmountCents,
 		&i.Status,
