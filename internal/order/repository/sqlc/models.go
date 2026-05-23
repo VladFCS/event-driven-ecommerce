@@ -23,6 +23,7 @@ type Order struct {
 	ShippingApartment    string             `json:"shipping_apartment"`
 	PaymentMethod        string             `json:"payment_method"`
 	PaymentMethodDetails string             `json:"payment_method_details"`
+	CancelReason         string             `json:"cancel_reason"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }

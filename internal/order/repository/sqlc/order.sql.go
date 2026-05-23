@@ -96,12 +96,13 @@ INSERT INTO orders (
     shipping_apartment,
     payment_method,
     payment_method_details,
+    cancel_reason,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
-RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, cancel_reason, created_at, updated_at
 `
 
 type CreateOrderParams struct {
@@ -119,6 +120,7 @@ type CreateOrderParams struct {
 	ShippingApartment    string             `json:"shipping_apartment"`
 	PaymentMethod        string             `json:"payment_method"`
 	PaymentMethodDetails string             `json:"payment_method_details"`
+	CancelReason         string             `json:"cancel_reason"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
@@ -139,6 +141,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		arg.ShippingApartment,
 		arg.PaymentMethod,
 		arg.PaymentMethodDetails,
+		arg.CancelReason,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -158,6 +161,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.ShippingApartment,
 		&i.PaymentMethod,
 		&i.PaymentMethodDetails,
+		&i.CancelReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -273,7 +277,7 @@ func (q *Queries) DeleteOrderItemsByOrderID(ctx context.Context, orderID string)
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, cancel_reason, created_at, updated_at
 FROM orders
 WHERE id = $1
 `
@@ -296,6 +300,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id string) (Order, error) {
 		&i.ShippingApartment,
 		&i.PaymentMethod,
 		&i.PaymentMethodDetails,
+		&i.CancelReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -303,7 +308,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id string) (Order, error) {
 }
 
 const getOrderByIdempotencyKey = `-- name: GetOrderByIdempotencyKey :one
-SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, cancel_reason, created_at, updated_at
 FROM orders
 WHERE idempotency_key = $1
 `
@@ -326,6 +331,7 @@ func (q *Queries) GetOrderByIdempotencyKey(ctx context.Context, idempotencyKey p
 		&i.ShippingApartment,
 		&i.PaymentMethod,
 		&i.PaymentMethodDetails,
+		&i.CancelReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -430,7 +436,7 @@ func (q *Queries) ListOrderItemsByOrderIDs(ctx context.Context, dollar_1 []strin
 }
 
 const listOrdersByCustomer = `-- name: ListOrdersByCustomer :many
-SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+SELECT id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, cancel_reason, created_at, updated_at
 FROM orders
 WHERE customer_id = $1
 ORDER BY created_at ASC, id ASC
@@ -467,6 +473,7 @@ func (q *Queries) ListOrdersByCustomer(ctx context.Context, arg ListOrdersByCust
 			&i.ShippingApartment,
 			&i.PaymentMethod,
 			&i.PaymentMethodDetails,
+			&i.CancelReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -534,10 +541,11 @@ SET
     shipping_apartment = $12,
     payment_method = $13,
     payment_method_details = $14,
-    created_at = $15,
-    updated_at = $16
+    cancel_reason = $15,
+    created_at = $16,
+    updated_at = $17
 WHERE id = $1
-RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, created_at, updated_at
+RETURNING id, customer_id, idempotency_key, total_amount_currency, total_amount_cents, status, shipping_country, shipping_city, shipping_street, shipping_postal_code, shipping_house, shipping_apartment, payment_method, payment_method_details, cancel_reason, created_at, updated_at
 `
 
 type UpdateOrderParams struct {
@@ -555,6 +563,7 @@ type UpdateOrderParams struct {
 	ShippingApartment    string             `json:"shipping_apartment"`
 	PaymentMethod        string             `json:"payment_method"`
 	PaymentMethodDetails string             `json:"payment_method_details"`
+	CancelReason         string             `json:"cancel_reason"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
@@ -575,6 +584,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		arg.ShippingApartment,
 		arg.PaymentMethod,
 		arg.PaymentMethodDetails,
+		arg.CancelReason,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -594,6 +604,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		&i.ShippingApartment,
 		&i.PaymentMethod,
 		&i.PaymentMethodDetails,
+		&i.CancelReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
