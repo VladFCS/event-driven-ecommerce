@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/service"
@@ -103,7 +106,18 @@ func main() {
 		},
 	})
 
-	service := service.NewOrderService(repository)
+	publisher, closePublisher, err := newOrderEventPublisher(log)
+	if err != nil {
+		log.Error("failed to configure order event publisher", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closePublisher(); err != nil {
+			log.Error("failed to close order event publisher", slog.Any("error", err))
+		}
+	}()
+
+	service := service.NewOrderService(repository, publisher)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer(
@@ -140,4 +154,37 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newOrderEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_ORDER_CREATED_TOPIC", "orders.created"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CREATED_TOPIC is required")
+	}
+
+	publisher := events.NewKafkaPublisher(brokers, topic, logger)
+	logger.Info(
+		"configured kafka order event publisher",
+		slog.Any("brokers", brokers),
+		slog.String("topic", topic),
+	)
+	return publisher, publisher.Close, nil
+}
+
+func parseKafkaBrokers(raw string) []string {
+	parts := strings.Split(raw, ",")
+	brokers := make([]string, 0, len(parts))
+	for _, part := range parts {
+		broker := strings.TrimSpace(part)
+		if broker != "" {
+			brokers = append(brokers, broker)
+		}
+	}
+	return brokers
 }
