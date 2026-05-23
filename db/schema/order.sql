@@ -13,6 +13,7 @@ CREATE TABLE orders (
     shipping_apartment TEXT NOT NULL DEFAULT '',
     payment_method TEXT NOT NULL,
     payment_method_details TEXT NOT NULL DEFAULT '',
+    cancel_reason TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
 );

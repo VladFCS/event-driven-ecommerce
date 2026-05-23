@@ -14,10 +14,11 @@ INSERT INTO orders (
     shipping_apartment,
     payment_method,
     payment_method_details,
+    cancel_reason,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 RETURNING *;
 
@@ -87,8 +88,9 @@ SET
     shipping_apartment = $12,
     payment_method = $13,
     payment_method_details = $14,
-    created_at = $15,
-    updated_at = $16
+    cancel_reason = $15,
+    created_at = $16,
+    updated_at = $17
 WHERE id = $1
 RETURNING *;
 

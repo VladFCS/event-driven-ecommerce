@@ -1,0 +1,2 @@
+ALTER TABLE orders
+ADD COLUMN cancel_reason TEXT NOT NULL DEFAULT '';
