@@ -2,13 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
-	inventoryclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/inventory"
 	orderclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/order"
-	paymentclient "github.com/vladfc/event-driven-ecommerce-app/internal/gateway/client/payment"
 )
 
 func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*CheckoutResult, error) {
@@ -33,12 +30,6 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 	}
 	if s.orderClient == nil {
 		return nil, fmt.Errorf("%w: order client is not configured", ErrDownstreamFailed)
-	}
-	if s.inventoryClient == nil {
-		return nil, fmt.Errorf("%w: inventory client is not configured", ErrDownstreamFailed)
-	}
-	if s.paymentClient == nil {
-		return nil, fmt.Errorf("%w: payment client is not configured", ErrDownstreamFailed)
 	}
 
 	opCtx := ctx
@@ -76,91 +67,9 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 	}
 
 	order := orderResp.Order
-	reservedItems := make([]orderclient.OrderItem, 0, len(order.Items))
-	for _, item := range order.Items {
-		_, err := s.inventoryClient.ReserveStock(opCtx, &inventoryclient.ReserveStockRequest{
-			ProductID: item.ProductID,
-			Quantity:  int64(item.Quantity),
-			OrderID:   order.ID,
-		})
-		if err != nil {
-			return nil, s.compensateCheckoutFailure(order.ID, reservedItems, wrapDownstreamError("inventory reserve stock", err))
-		}
-
-		reservedItems = append(reservedItems, item)
-	}
-
-	totalAmount := order.TotalAmount
-	if totalAmount.AmountCents <= 0 || strings.TrimSpace(totalAmount.Currency) == "" {
-		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, fmt.Errorf("%w: order total amount is empty", ErrDownstreamFailed))
-	}
-
-	paymentCurrency, err := normalizeCurrency(totalAmount.Currency)
-	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, err)
-	}
-
-	paymentResp, err := s.paymentClient.CreatePayment(opCtx, &paymentclient.CreatePaymentRequest{
-		OrderID:    order.ID,
-		CustomerID: order.CustomerID,
-		Amount: paymentclient.Money{
-			Currency:    paymentCurrency,
-			AmountCents: totalAmount.AmountCents,
-		},
-		PaymentMethod:        paymentMethod,
-		PaymentMethodDetails: strings.TrimSpace(in.Payment.MethodDetails),
-		IdempotencyKey:       strings.TrimSpace(in.IdempotencyKey),
-	})
-	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, wrapDownstreamError("payment create", err))
-	}
-	if paymentResp == nil || paymentResp.Payment == nil {
-		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, fmt.Errorf("%w: payment response is empty", ErrDownstreamFailed))
-	}
 
 	return &CheckoutResult{
-		OrderID:       order.ID,
-		PaymentID:     paymentResp.Payment.ID,
-		OrderStatus:   order.Status,
-		PaymentStatus: paymentResp.Payment.Status,
+		OrderID:     order.ID,
+		OrderStatus: order.Status,
 	}, nil
-}
-
-func (s *GatewayService) compensateCheckoutFailure(orderID string, reservedItems []orderclient.OrderItem, originalErr error) error {
-	compensationErrs := make([]error, 0, len(reservedItems)+1)
-	cleanupCtx := context.Background()
-	cancel := func() {}
-	if s.compensationTimeout > 0 {
-		cleanupCtx, cancel = context.WithTimeout(context.Background(), s.compensationTimeout)
-	}
-	defer cancel()
-
-	for i := len(reservedItems) - 1; i >= 0; i-- {
-		item := reservedItems[i]
-		_, err := s.inventoryClient.ReleaseStock(cleanupCtx, &inventoryclient.ReleaseStockRequest{
-			ProductID: item.ProductID,
-			Quantity:  int64(item.Quantity),
-			OrderID:   orderID,
-		})
-		if err != nil {
-			compensationErrs = append(compensationErrs, wrapDownstreamError("inventory release stock", err))
-		}
-	}
-
-	if strings.TrimSpace(orderID) != "" {
-		_, err := s.orderClient.CancelOrder(cleanupCtx, &orderclient.CancelOrderRequest{
-			OrderID: orderID,
-			Reason:  "checkout failed",
-		})
-		if err != nil {
-			compensationErrs = append(compensationErrs, wrapDownstreamError("order cancel", err))
-		}
-	}
-
-	if len(compensationErrs) == 0 {
-		return originalErr
-	}
-
-	compensationErrs = append([]error{originalErr}, compensationErrs...)
-	return errors.Join(compensationErrs...)
 }
