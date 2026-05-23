@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
@@ -52,6 +55,28 @@ func main() {
 	service := service.NewInventoryService(repository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
+	publisher, closePublisher, err := newInventoryEventPublisher(log)
+	if err != nil {
+		log.Error("failed to configure inventory event publisher", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closePublisher(); err != nil {
+			log.Error("failed to close inventory event publisher", slog.Any("error", err))
+		}
+	}()
+
+	consumer, closeConsumer, err := newOrderCreatedConsumer(service, publisher, log)
+	if err != nil {
+		log.Error("failed to configure order.created consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeConsumer(); err != nil {
+			log.Error("failed to close order.created consumer", slog.Any("error", err))
+		}
+	}()
+
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcmiddleware.RequestIDUnaryServerInterceptor()),
 	)
@@ -70,6 +95,14 @@ func main() {
 		}
 	}()
 
+	go func() {
+		log.Info("starting order.created consumer")
+		if runErr := consumer.Run(ctx); runErr != nil && ctx.Err() == nil {
+			log.Error("order.created consumer stopped with error", slog.Any("error", runErr))
+			stop()
+		}
+	}()
+
 	<-ctx.Done()
 	log.Info("shutting down inventory-service")
 	server.GracefulStop()
@@ -80,4 +113,58 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newInventoryEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	reservedTopic := strings.TrimSpace(getenv("KAFKA_INVENTORY_RESERVED_TOPIC", "inventory.reserved"))
+	failedTopic := strings.TrimSpace(getenv("KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC", "inventory.reservation_failed"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if reservedTopic == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_RESERVED_TOPIC is required")
+	}
+	if failedTopic == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC is required")
+	}
+
+	publisher := events.NewKafkaPublisher(brokers, reservedTopic, failedTopic, logger)
+	return publisher, publisher.Close, nil
+}
+
+func newOrderCreatedConsumer(
+	service *service.InventoryService,
+	publisher events.Publisher,
+	logger *slog.Logger,
+) (*events.OrderCreatedConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_ORDER_CREATED_TOPIC", "orders.created"))
+	groupID := strings.TrimSpace(getenv("KAFKA_INVENTORY_CONSUMER_GROUP", "inventory-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CREATED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_CONSUMER_GROUP is required")
+	}
+
+	consumer := events.NewOrderCreatedConsumer(brokers, topic, groupID, service, publisher, logger)
+	return consumer, consumer.Close, nil
+}
+
+func parseKafkaBrokers(raw string) []string {
+	parts := strings.Split(raw, ",")
+	brokers := make([]string, 0, len(parts))
+	for _, part := range parts {
+		broker := strings.TrimSpace(part)
+		if broker != "" {
+			brokers = append(brokers, broker)
+		}
+	}
+	return brokers
 }
