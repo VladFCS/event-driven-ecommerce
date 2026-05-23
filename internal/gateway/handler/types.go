@@ -147,10 +147,8 @@ type AddressResponse struct {
 }
 
 type CheckoutResponse struct {
-	OrderID       string `json:"order_id"`
-	PaymentID     string `json:"payment_id"`
-	OrderStatus   string `json:"order_status"`
-	PaymentStatus string `json:"payment_status"`
+	OrderID     string `json:"order_id"`
+	OrderStatus string `json:"order_status"`
 }
 
 type GetPaymentByIDURIRequest struct {

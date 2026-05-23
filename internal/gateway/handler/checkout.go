@@ -30,10 +30,8 @@ func (h *HTTPHandler) Checkout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, &CheckoutResponse{
-		OrderID:       resp.OrderID,
-		PaymentID:     resp.PaymentID,
-		OrderStatus:   resp.OrderStatus,
-		PaymentStatus: resp.PaymentStatus,
+		OrderID:     resp.OrderID,
+		OrderStatus: resp.OrderStatus,
 	})
 }
 

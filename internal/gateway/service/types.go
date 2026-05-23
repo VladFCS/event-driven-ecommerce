@@ -37,10 +37,8 @@ type PaymentDetails struct {
 }
 
 type CheckoutResult struct {
-	OrderID       string
-	PaymentID     string
-	OrderStatus   string
-	PaymentStatus string
+	OrderID     string
+	OrderStatus string
 }
 
 type GetOrderByIDInput struct {
