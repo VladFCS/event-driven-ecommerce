@@ -79,6 +79,7 @@ message Order {
   string created_at = 7;
   string updated_at = 8;
   PaymentDetails payment = 9;
+  string cancel_reason = 10;
 }
 
 message CreateOrderRequest {

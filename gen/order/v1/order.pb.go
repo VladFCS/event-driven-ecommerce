@@ -539,6 +539,7 @@ type Order struct {
 	CreatedAt       string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Payment         *PaymentDetails        `protobuf:"bytes,9,opt,name=payment,proto3" json:"payment,omitempty"`
+	CancelReason    string                 `protobuf:"bytes,10,opt,name=cancel_reason,json=cancelReason,proto3" json:"cancel_reason,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -634,6 +635,13 @@ func (x *Order) GetPayment() *PaymentDetails {
 		return x.Payment
 	}
 	return nil
+}
+
+func (x *Order) GetCancelReason() string {
+	if x != nil {
+		return x.CancelReason
+	}
+	return ""
 }
 
 type CreateOrderRequest struct {
@@ -1104,7 +1112,7 @@ const file_order___v1_order_proto_rawDesc = "" +
 	"\vpostal_code\x18\x04 \x01(\tR\n" +
 	"postalCode\x12\x14\n" +
 	"\x05house\x18\x05 \x01(\tR\x05house\x12\x1c\n" +
-	"\tapartment\x18\x06 \x01(\tR\tapartment\"\x81\x03\n" +
+	"\tapartment\x18\x06 \x01(\tR\tapartment\"\xa6\x03\n" +
 	"\x05Order\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x1f\n" +
 	"\vcustomer_id\x18\x02 \x01(\tR\n" +
@@ -1117,7 +1125,9 @@ const file_order___v1_order_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\tR\tupdatedAt\x122\n" +
-	"\apayment\x18\t \x01(\v2\x18.order.v1.PaymentDetailsR\apayment\"\x81\x02\n" +
+	"\apayment\x18\t \x01(\v2\x18.order.v1.PaymentDetailsR\apayment\x12#\n" +
+	"\rcancel_reason\x18\n" +
+	" \x01(\tR\fcancelReason\"\x81\x02\n" +
 	"\x12CreateOrderRequest\x12\x1f\n" +
 	"\vcustomer_id\x18\x01 \x01(\tR\n" +
 	"customerId\x12/\n" +
