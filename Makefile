@@ -21,10 +21,11 @@ GATEWAY_CMD := ./cmd/gateway-service
 COMPOSE ?= docker compose
 KAFKA_BROKERS ?= localhost:19092
 KAFKA_ORDER_CREATED_TOPIC ?= orders.created
+REDIS_ADDR ?= localhost:6379
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
-	run-catalog run-inventory run-payment run-order run-order-kafka run-gateway run-services \
+	run-catalog run-inventory run-inventory-kafka run-payment run-order run-order-kafka run-gateway run-services \
 	kafka-up kafka-down kafka-logs
 
 help: ## Show available targets
@@ -114,6 +115,9 @@ run-catalog: ## Run catalog-service
 run-inventory: ## Run inventory-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
 
+run-inventory-kafka: ## Run inventory-service against the local Redpanda broker and Redis
+	KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
+
 run-payment: ## Run payment-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
@@ -126,20 +130,20 @@ run-order-kafka: ## Run order-service against the local Redpanda broker
 run-gateway: ## Run gateway-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(GATEWAY_CMD)
 
-kafka-up: ## Start local Redpanda + Console
-	$(COMPOSE) up -d redpanda redpanda-console
+kafka-up: ## Start local Redpanda + Console + Redis
+	$(COMPOSE) up -d redpanda redpanda-console redis
 
 kafka-down: ## Stop local Redpanda + Console
 	$(COMPOSE) down
 
-kafka-logs: ## Tail local Redpanda + Console logs
-	$(COMPOSE) logs -f redpanda redpanda-console
+kafka-logs: ## Tail local Redpanda + Console + Redis logs
+	$(COMPOSE) logs -f redpanda redpanda-console redis
 
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
 	@echo "  make kafka-up"
 	@echo "  make run-catalog"
-	@echo "  make run-inventory"
+	@echo "  make run-inventory-kafka"
 	@echo "  make run-payment"
 	@echo "  make run-order-kafka"
 	@echo "  make run-gateway"

@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/redis/go-redis/v9"
 	inventoryv1 "github.com/vladfc/event-driven-ecommerce-app/gen/inventory/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/events"
@@ -66,7 +70,18 @@ func main() {
 		}
 	}()
 
-	consumer, closeConsumer, err := newOrderCreatedConsumer(service, publisher, log)
+	deduplicator, closeDeduplicator, err := newInventoryEventDeduplicator(log)
+	if err != nil {
+		log.Error("failed to configure inventory event deduplicator", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeDeduplicator(); err != nil {
+			log.Error("failed to close inventory event deduplicator", slog.Any("error", err))
+		}
+	}()
+
+	consumer, closeConsumer, err := newOrderCreatedConsumer(service, deduplicator, publisher, log)
 	if err != nil {
 		log.Error("failed to configure order.created consumer", slog.Any("error", err))
 		os.Exit(1)
@@ -136,6 +151,7 @@ func newInventoryEventPublisher(logger *slog.Logger) (events.Publisher, func() e
 
 func newOrderCreatedConsumer(
 	service *service.InventoryService,
+	deduplicator events.EventDeduplicator,
 	publisher events.Publisher,
 	logger *slog.Logger,
 ) (*events.OrderCreatedConsumer, func() error, error) {
@@ -153,8 +169,52 @@ func newOrderCreatedConsumer(
 		return nil, nil, errors.New("KAFKA_INVENTORY_CONSUMER_GROUP is required")
 	}
 
-	consumer := events.NewOrderCreatedConsumer(brokers, topic, groupID, service, publisher, logger)
+	consumer := events.NewOrderCreatedConsumer(brokers, topic, groupID, service, deduplicator, publisher, logger)
 	return consumer, consumer.Close, nil
+}
+
+func newInventoryEventDeduplicator(logger *slog.Logger) (events.EventDeduplicator, func() error, error) {
+	addr := strings.TrimSpace(getenv("REDIS_ADDR", "localhost:6379"))
+	password := getenv("REDIS_PASSWORD", "")
+	rawDB := strings.TrimSpace(getenv("REDIS_DB", "0"))
+	rawTTL := strings.TrimSpace(getenv("REDIS_EVENT_DEDUP_TTL", "24h"))
+
+	if addr == "" {
+		return nil, nil, errors.New("REDIS_ADDR is required")
+	}
+
+	db, err := strconv.Atoi(rawDB)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse REDIS_DB: %w", err)
+	}
+
+	ttl, err := time.ParseDuration(rawTTL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse REDIS_EVENT_DEDUP_TTL: %w", err)
+	}
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+	})
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		_ = client.Close()
+		return nil, nil, fmt.Errorf("ping redis: %w", err)
+	}
+
+	logger.Info(
+		"configured redis inventory event deduplicator",
+		slog.String("addr", addr),
+		slog.Int("db", db),
+		slog.String("ttl", ttl.String()),
+	)
+
+	return events.NewRedisEventDeduplicator(client, ttl), client.Close, nil
 }
 
 func parseKafkaBrokers(raw string) []string {

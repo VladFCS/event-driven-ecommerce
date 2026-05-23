@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
@@ -15,11 +14,9 @@ import (
 type OrderCreatedConsumer struct {
 	reader    *kafka.Reader
 	service   *service.InventoryService
+	deduper   EventDeduplicator
 	publisher Publisher
 	logger    *slog.Logger
-
-	mu                sync.Mutex
-	processedEventIDs map[string]struct{}
 }
 
 func NewOrderCreatedConsumer(
@@ -27,6 +24,7 @@ func NewOrderCreatedConsumer(
 	topic string,
 	groupID string,
 	service *service.InventoryService,
+	deduper EventDeduplicator,
 	publisher Publisher,
 	logger *slog.Logger,
 ) *OrderCreatedConsumer {
@@ -40,10 +38,10 @@ func NewOrderCreatedConsumer(
 			Topic:   topic,
 			GroupID: groupID,
 		}),
-		service:           service,
-		publisher:         publisher,
-		logger:            logger,
-		processedEventIDs: make(map[string]struct{}),
+		service:   service,
+		deduper:   deduper,
+		publisher: publisher,
+		logger:    logger,
 	}
 }
 
@@ -89,7 +87,12 @@ func (c *OrderCreatedConsumer) handleMessage(ctx context.Context, msg kafka.Mess
 		return true, nil
 	}
 
-	if c.isProcessed(envelope.EventID) {
+	processed, err := c.deduper.IsProcessed(ctx, envelope.EventID)
+	if err != nil {
+		return false, err
+	}
+
+	if processed {
 		c.logger.InfoContext(ctx, "skipping duplicate event", slog.String("event_id", envelope.EventID))
 		return true, nil
 	}
@@ -106,30 +109,32 @@ func (c *OrderCreatedConsumer) handleMessage(ctx context.Context, msg kafka.Mess
 	}
 
 	if reservationErr != nil {
-		err := c.publisher.PublishInventoryReservationFailed(ctx, envelope.EventID, sharedevents.InventoryReservationFailed{
+		if err := c.publisher.PublishInventoryReservationFailed(ctx, envelope.EventID, sharedevents.InventoryReservationFailed{
 			OrderID:    event.OrderID,
 			CustomerID: event.CustomerID,
 			FailedItem: failedItem,
 			Reason:     reservationErr.Error(),
-		})
-		if err != nil {
+		}); err != nil {
 			return false, err
 		}
 
-		c.markProcessed(envelope.EventID)
+		if err := c.deduper.MarkProcessed(ctx, envelope.EventID); err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
-	err := c.publisher.PublishInventoryReserved(ctx, envelope.EventID, sharedevents.InventoryReserved{
+	if err := c.publisher.PublishInventoryReserved(ctx, envelope.EventID, sharedevents.InventoryReserved{
 		OrderID:    event.OrderID,
 		CustomerID: event.CustomerID,
 		Items:      reservedItems,
-	})
-	if err != nil {
+	}); err != nil {
 		return false, err
 	}
 
-	c.markProcessed(envelope.EventID)
+	if err := c.deduper.MarkProcessed(ctx, envelope.EventID); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -168,19 +173,4 @@ func (c *OrderCreatedConsumer) releaseReserved(ctx context.Context, orderID stri
 		}
 	}
 	return nil
-}
-
-func (c *OrderCreatedConsumer) isProcessed(eventID string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	_, ok := c.processedEventIDs[eventID]
-	return ok
-}
-
-func (c *OrderCreatedConsumer) markProcessed(eventID string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.processedEventIDs[eventID] = struct{}{}
 }
