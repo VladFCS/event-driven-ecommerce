@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	sharedevents "github.com/vladfc/event-driven-ecommerce-app/internal/shared/events"
 )
-
-const OrderCreatedEventType = "order.created"
 
 type KafkaPublisher struct {
 	writer *kafka.Writer
@@ -32,32 +31,38 @@ func NewKafkaPublisher(brokers []string, topic string, logger *slog.Logger) *Kaf
 	}
 }
 
-func (p *KafkaPublisher) PublishOrderCreated(ctx context.Context, event OrderCreated) error {
-	envelope := EventEnvelope{
-		EventID:    fmt.Sprintf("evt-%d", time.Now().UTC().UnixNano()),
-		EventType:  OrderCreatedEventType,
-		OccurredAt: time.Now().UTC().Format(time.RFC3339),
-		Payload:    event,
+func (p *KafkaPublisher) PublishOrderCreated(ctx context.Context, event sharedevents.OrderCreated) error {
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("marshal order created payload: %w", err)
 	}
 
-	payload, err := json.Marshal(envelope)
+	envelope := sharedevents.Envelope{
+		EventID:    fmt.Sprintf("evt-%d", time.Now().UTC().UnixNano()),
+		EventType:  sharedevents.OrderCreatedEventType,
+		OccurredAt: time.Now().UTC().Format(time.RFC3339),
+		Payload:    payload,
+	}
+
+	messageBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return fmt.Errorf("marshal order created event: %w", err)
 	}
 
 	msg := kafka.Message{
 		Key:   []byte(event.OrderID),
-		Value: payload,
+		Value: messageBytes,
 		Time:  time.Now().UTC(),
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
 		return fmt.Errorf("write order created event to kafka: %w", err)
 	}
+
 	p.logger.InfoContext(
 		ctx,
 		"order.created event published",
-		slog.String("event_type", OrderCreatedEventType),
+		slog.String("event_type", sharedevents.OrderCreatedEventType),
 		slog.String("order_id", event.OrderID),
 	)
 

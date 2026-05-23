@@ -10,6 +10,7 @@ import (
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
+	sharedevents "github.com/vladfc/event-driven-ecommerce-app/internal/shared/events"
 )
 
 type OrderService struct {
@@ -110,34 +111,34 @@ func newOrderID() string {
 	return fmt.Sprintf("ord-%d", time.Now().UTC().UnixNano())
 }
 
-func toOrderCreatedEvent(order domain.Order) events.OrderCreated {
-	items := make([]events.OrderCreatedItem, 0, len(order.Items))
+func toOrderCreatedEvent(order domain.Order) sharedevents.OrderCreated {
+	items := make([]sharedevents.OrderCreatedItem, 0, len(order.Items))
 	for _, item := range order.Items {
-		items = append(items, events.OrderCreatedItem{
+		items = append(items, sharedevents.OrderCreatedItem{
 			ProductID:   item.ProductID,
 			SKU:         item.SKU,
 			ProductName: item.ProductName,
 			Quantity:    item.Quantity,
-			UnitPrice: events.Money{
+			UnitPrice: sharedevents.Money{
 				Currency:    item.UnitPrice.Currency.String(),
 				AmountCents: item.UnitPrice.AmountCents,
 			},
-			TotalPrice: events.Money{
+			TotalPrice: sharedevents.Money{
 				Currency:    item.TotalPrice.Currency.String(),
 				AmountCents: item.TotalPrice.AmountCents,
 			},
 		})
 	}
 
-	return events.OrderCreated{
+	return sharedevents.OrderCreated{
 		OrderID:    order.ID,
 		CustomerID: order.CustomerID,
 		Status:     order.Status.String(),
-		TotalAmount: events.Money{
+		TotalAmount: sharedevents.Money{
 			Currency:    order.TotalAmount.Currency.String(),
 			AmountCents: order.TotalAmount.AmountCents,
 		},
-		ShippingAddress: events.Address{
+		ShippingAddress: sharedevents.Address{
 			Country:    order.ShippingAddress.Country,
 			City:       order.ShippingAddress.City,
 			Street:     order.ShippingAddress.Street,
