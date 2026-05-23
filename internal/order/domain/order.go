@@ -12,8 +12,10 @@ var (
 	ErrInvalidOrder                = errors.New("invalid order")
 	ErrOrderAlreadyExists          = errors.New("order already exists")
 	ErrIdempotencyKeyAlreadyExists = errors.New("order already exists for idempotency key")
+	ErrIdempotencyKeyConflict      = errors.New("idempotency key already used for a different order payload")
 	ErrInvalidOrderID              = errors.New("invalid order id")
 	ErrInvalidCustomerID           = errors.New("invalid customer id")
+	ErrOrderCannotBeCancelled      = errors.New("order cannot be cancelled in current status")
 )
 
 type Money struct {
@@ -53,6 +55,7 @@ type Order struct {
 	Status          orderv1.OrderStatus
 	ShippingAddress Address
 	Payment         PaymentDetails
+	CancelReason    string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
