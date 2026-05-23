@@ -18,9 +18,14 @@ PAYMENT_CMD := ./cmd/payment-service
 ORDER_CMD := ./cmd/order-service
 GATEWAY_CMD := ./cmd/gateway-service
 
+COMPOSE ?= docker compose
+KAFKA_BROKERS ?= localhost:19092
+KAFKA_ORDER_CREATED_TOPIC ?= orders.created
+
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
-	run-catalog run-inventory run-payment run-order run-gateway run-services
+	run-catalog run-inventory run-payment run-order run-order-kafka run-gateway run-services \
+	kafka-up kafka-down kafka-logs
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -112,18 +117,31 @@ run-inventory: ## Run inventory-service
 run-payment: ## Run payment-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
-run-order: ## Run order-service
+run-order: ## Run order-service (requires KAFKA_BROKERS)
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+
+run-order-kafka: ## Run order-service against the local Redpanda broker
+	KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-gateway: ## Run gateway-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(GATEWAY_CMD)
 
+kafka-up: ## Start local Redpanda + Console
+	$(COMPOSE) up -d redpanda redpanda-console
+
+kafka-down: ## Stop local Redpanda + Console
+	$(COMPOSE) down
+
+kafka-logs: ## Tail local Redpanda + Console logs
+	$(COMPOSE) logs -f redpanda redpanda-console
+
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
+	@echo "  make kafka-up"
 	@echo "  make run-catalog"
 	@echo "  make run-inventory"
 	@echo "  make run-payment"
-	@echo "  make run-order"
+	@echo "  make run-order-kafka"
 	@echo "  make run-gateway"
 
 clean: ## Remove local build artifacts and cache
