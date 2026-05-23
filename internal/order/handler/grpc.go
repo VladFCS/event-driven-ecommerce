@@ -65,7 +65,7 @@ func (h *GRPCHandler) GetOrderByID(ctx context.Context, req *orderv1.GetOrderByI
 }
 
 func (h *GRPCHandler) CancelOrder(ctx context.Context, req *orderv1.CancelOrderRequest) (*orderv1.CancelOrderResponse, error) {
-	order, err := h.service.CancelOrder(ctx, req.GetOrderId())
+	order, err := h.service.CancelOrder(ctx, req.GetOrderId(), req.GetReason())
 	if err != nil {
 		return nil, mapOrderError(err)
 	}
@@ -224,6 +224,7 @@ func convertOrderToProto(order domain.Order) *orderv1.Order {
 		Status:          order.Status,
 		ShippingAddress: convertAddressToProto(order.ShippingAddress),
 		Payment:         convertPaymentDetailsToProto(order.Payment),
+		CancelReason:    order.CancelReason,
 		CreatedAt:       order.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       order.UpdatedAt.Format(time.RFC3339),
 	}
@@ -235,8 +236,10 @@ func mapOrderError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrOrderNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, domain.ErrOrderAlreadyExists):
+	case errors.Is(err, domain.ErrOrderAlreadyExists), errors.Is(err, domain.ErrIdempotencyKeyConflict):
 		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, domain.ErrOrderCannotBeCancelled):
+		return status.Error(codes.FailedPrecondition, err.Error())
 	default:
 		return status.Error(codes.Internal, "internal server error")
 	}

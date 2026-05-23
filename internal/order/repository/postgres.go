@@ -220,6 +220,16 @@ func validateOrder(order domain.Order) error {
 	if strings.TrimSpace(order.ID) == "" || strings.TrimSpace(order.CustomerID) == "" {
 		return domain.ErrInvalidOrder
 	}
+	if strings.TrimSpace(order.ShippingAddress.Country) == "" ||
+		strings.TrimSpace(order.ShippingAddress.City) == "" ||
+		strings.TrimSpace(order.ShippingAddress.Street) == "" ||
+		strings.TrimSpace(order.ShippingAddress.PostalCode) == "" ||
+		strings.TrimSpace(order.ShippingAddress.House) == "" {
+		return domain.ErrInvalidOrder
+	}
+	if order.Payment.Method == orderv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED {
+		return domain.ErrInvalidOrder
+	}
 
 	return nil
 }
@@ -296,6 +306,7 @@ func toCreateOrderParams(order domain.Order) orderdb.CreateOrderParams {
 		ShippingApartment:    base.ShippingApartment,
 		PaymentMethod:        base.PaymentMethod,
 		PaymentMethodDetails: base.PaymentMethodDetails,
+		CancelReason:         base.CancelReason,
 		CreatedAt:            base.CreatedAt,
 		UpdatedAt:            base.UpdatedAt,
 	}
@@ -319,6 +330,7 @@ func toUpdateOrderParams(order domain.Order) orderdb.UpdateOrderParams {
 		ShippingApartment:    base.ShippingApartment,
 		PaymentMethod:        base.PaymentMethod,
 		PaymentMethodDetails: base.PaymentMethodDetails,
+		CancelReason:         base.CancelReason,
 		CreatedAt:            base.CreatedAt,
 		UpdatedAt:            base.UpdatedAt,
 	}
@@ -339,6 +351,7 @@ type orderDBParams struct {
 	ShippingApartment    string
 	PaymentMethod        string
 	PaymentMethodDetails string
+	CancelReason         string
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
 }
@@ -358,6 +371,7 @@ func toOrderDBParams(order domain.Order) orderDBParams {
 		ShippingApartment:    order.ShippingAddress.Apartment,
 		PaymentMethod:        order.Payment.Method.String(),
 		PaymentMethodDetails: order.Payment.MethodDetails,
+		CancelReason:         strings.TrimSpace(order.CancelReason),
 		CreatedAt: pgtype.Timestamptz{
 			Time:  order.CreatedAt,
 			Valid: !order.CreatedAt.IsZero(),
@@ -495,6 +509,7 @@ func mapDBOrder(row orderdb.Order, itemRows []orderdb.OrderItem) (domain.Order, 
 			Method:        paymentMethod,
 			MethodDetails: row.PaymentMethodDetails,
 		},
+		CancelReason: row.CancelReason,
 	}
 
 	if row.CreatedAt.Valid {
