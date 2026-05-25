@@ -32,8 +32,9 @@ POSTGRES_PORT ?= 5432
 POSTGRES_DB ?= ecommerce
 POSTGRES_USER ?= app
 POSTGRES_PASSWORD ?= app
-PAYMENT_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
-ORDER_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
+DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
+PAYMENT_DATABASE_URL ?= $(DATABASE_URL)
+ORDER_DATABASE_URL ?= $(DATABASE_URL)
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
@@ -178,16 +179,16 @@ db-down: ## Stop local PostgreSQL
 db-logs: ## Tail local PostgreSQL logs
 	$(COMPOSE) logs -f postgres
 
-db-prepare: db-up db-migrate-up ## Start PostgreSQL and apply payment migrations
+db-prepare: db-up db-migrate-up ## Start shared PostgreSQL and apply shared service migrations
 
-db-migrate-up: ## Apply payment-service PostgreSQL migrations
-	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" up
+db-migrate-up: ## Apply shared PostgreSQL migrations for local services
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
 
-db-migrate-down: ## Roll back the most recent payment-service PostgreSQL migration
-	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" down 1
+db-migrate-down: ## Roll back the most recent shared PostgreSQL migration
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
 
-db-migrate-version: ## Show the current payment-service PostgreSQL migration version
-	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" version
+db-migrate-version: ## Show the current shared PostgreSQL migration version
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
 
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
