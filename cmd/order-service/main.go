@@ -33,12 +33,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	orderRepository, closeRepository, err := newOrderRepository(log)
+	topic := strings.TrimSpace(getenv("KAFKA_ORDER_CREATED_TOPIC", "orders.created"))
+	if topic == "" {
+		log.Error("failed to configure order event publisher", slog.Any("error", errors.New("KAFKA_ORDER_CREATED_TOPIC is required")))
+		os.Exit(1)
+	}
+
+	pool, closePool, err := newOrderDatabasePool(log)
 	if err != nil {
 		log.Error("failed to configure order repository", slog.Any("error", err))
 		os.Exit(1)
 	}
-	defer closeRepository()
+	defer closePool()
+
+	orderRepository := repository.NewPostgresRepository(pool, topic)
 
 	publisher, closePublisher, err := newOrderEventPublisher(log)
 	if err != nil {
@@ -51,7 +59,7 @@ func main() {
 		}
 	}()
 
-	service := service.NewOrderService(orderRepository, publisher)
+	service := service.NewOrderService(orderRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer(
@@ -63,6 +71,9 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log)
+	go outboxDispatcher.Run(ctx)
 
 	go func() {
 		log.Info("order-service started", slog.String("grpc_port", grpcPort))
@@ -90,7 +101,7 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-func newOrderRepository(logger *slog.Logger) (repository.OrderRepository, func(), error) {
+func newOrderDatabasePool(logger *slog.Logger) (*pgxpool.Pool, func(), error) {
 	databaseURL := strings.TrimSpace(getenv("ORDER_DATABASE_URL", ""))
 	if databaseURL == "" {
 		return nil, nil, errors.New("ORDER_DATABASE_URL is required")
@@ -111,7 +122,7 @@ func newOrderRepository(logger *slog.Logger) (repository.OrderRepository, func()
 
 	logger.Info("configured postgres order repository")
 
-	return repository.NewPostgresRepository(pool), pool.Close, nil
+	return pool, pool.Close, nil
 }
 
 func newOrderEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
@@ -126,7 +137,7 @@ func newOrderEventPublisher(logger *slog.Logger) (events.Publisher, func() error
 		return nil, nil, errors.New("KAFKA_ORDER_CREATED_TOPIC is required")
 	}
 
-	publisher := events.NewKafkaPublisher(brokers, topic, logger)
+	publisher := events.NewKafkaPublisher(brokers, logger)
 	logger.Info(
 		"configured kafka order event publisher",
 		slog.Any("brokers", brokers),
