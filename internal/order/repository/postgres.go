@@ -12,18 +12,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	orderdb "github.com/vladfc/event-driven-ecommerce-app/internal/order/repository/sqlc"
 )
 
 type PostgresRepository struct {
-	pool    *pgxpool.Pool
-	queries *orderdb.Queries
+	pool              *pgxpool.Pool
+	queries           *orderdb.Queries
+	orderCreatedTopic string
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+func NewPostgresRepository(pool *pgxpool.Pool, orderCreatedTopic string) *PostgresRepository {
 	return &PostgresRepository{
-		pool:    pool,
-		queries: orderdb.New(pool),
+		pool:              pool,
+		queries:           orderdb.New(pool),
+		orderCreatedTopic: strings.TrimSpace(orderCreatedTopic),
 	}
 }
 
@@ -46,6 +49,10 @@ func (r *PostgresRepository) CreateOrder(ctx context.Context, order domain.Order
 	}
 
 	if err := insertOrderItems(ctx, qtx, order); err != nil {
+		return domain.Order{}, err
+	}
+
+	if err := insertOrderCreatedOutboxEvent(ctx, qtx, order, r.orderCreatedTopic); err != nil {
 		return domain.Order{}, err
 	}
 
@@ -207,6 +214,39 @@ func insertOrderItems(ctx context.Context, q *orderdb.Queries, order domain.Orde
 		}); err != nil {
 			return fmt.Errorf("create order item in postgres: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func insertOrderCreatedOutboxEvent(ctx context.Context, q *orderdb.Queries, order domain.Order, topic string) error {
+	if strings.TrimSpace(topic) == "" {
+		return fmt.Errorf("create order outbox event in postgres: topic is required")
+	}
+
+	message, err := events.NewOrderCreatedOutboxMessage(order, topic)
+	if err != nil {
+		return fmt.Errorf("create order outbox event in postgres: %w", err)
+	}
+
+	if err := q.CreateOrderOutboxEvent(ctx, orderdb.CreateOrderOutboxEventParams{
+		ID:            message.ID,
+		AggregateType: message.AggregateType,
+		AggregateID:   message.AggregateID,
+		EventType:     message.EventType,
+		Topic:         message.Topic,
+		EventKey:      message.Key,
+		Payload:       message.Payload,
+		AttemptCount:  0,
+		LastError:     "",
+		LockedAt:      pgtype.Timestamptz{},
+		CreatedAt: pgtype.Timestamptz{
+			Time:  message.CreatedAt,
+			Valid: true,
+		},
+		PublishedAt: pgtype.Timestamptz{},
+	}); err != nil {
+		return fmt.Errorf("create order outbox event in postgres: %w", err)
 	}
 
 	return nil

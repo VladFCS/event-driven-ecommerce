@@ -8,20 +8,16 @@ import (
 
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
-	sharedevents "github.com/vladfc/event-driven-ecommerce-app/internal/shared/events"
 )
 
 type OrderService struct {
 	repository repository.OrderRepository
-	publisher  events.Publisher
 }
 
-func NewOrderService(repository repository.OrderRepository, publisher events.Publisher) *OrderService {
+func NewOrderService(repository repository.OrderRepository) *OrderService {
 	return &OrderService{
 		repository: repository,
-		publisher:  publisher,
 	}
 }
 
@@ -58,18 +54,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 	order.CreatedAt = time.Now()
 	order.UpdatedAt = order.CreatedAt
 
-	created, err := s.repository.CreateOrder(ctx, order)
-	if err != nil {
-		return domain.Order{}, err
-	}
-
-	if s.publisher != nil {
-		if err := s.publisher.PublishOrderCreated(ctx, toOrderCreatedEvent(created)); err != nil {
-			return domain.Order{}, err
-		}
-	}
-
-	return created, nil
+	// Order creation succeeds once the order and its outbox event are committed together.
+	// Kafka delivery is handled asynchronously by the outbox dispatcher.
+	return s.repository.CreateOrder(ctx, order)
 }
 
 func (s *OrderService) GetOrderByID(ctx context.Context, orderID string) (domain.Order, error) {
@@ -109,47 +96,4 @@ func (s *OrderService) ListOrdersByCustomer(ctx context.Context, customerID stri
 
 func newOrderID() string {
 	return fmt.Sprintf("ord-%d", time.Now().UTC().UnixNano())
-}
-
-func toOrderCreatedEvent(order domain.Order) sharedevents.OrderCreated {
-	items := make([]sharedevents.OrderCreatedItem, 0, len(order.Items))
-	for _, item := range order.Items {
-		items = append(items, sharedevents.OrderCreatedItem{
-			ProductID:   item.ProductID,
-			SKU:         item.SKU,
-			ProductName: item.ProductName,
-			Quantity:    item.Quantity,
-			UnitPrice: sharedevents.Money{
-				Currency:    item.UnitPrice.Currency.String(),
-				AmountCents: item.UnitPrice.AmountCents,
-			},
-			TotalPrice: sharedevents.Money{
-				Currency:    item.TotalPrice.Currency.String(),
-				AmountCents: item.TotalPrice.AmountCents,
-			},
-		})
-	}
-
-	return sharedevents.OrderCreated{
-		OrderID:    order.ID,
-		CustomerID: order.CustomerID,
-		Status:     order.Status.String(),
-		TotalAmount: sharedevents.Money{
-			Currency:    order.TotalAmount.Currency.String(),
-			AmountCents: order.TotalAmount.AmountCents,
-		},
-		ShippingAddress: sharedevents.Address{
-			Country:    order.ShippingAddress.Country,
-			City:       order.ShippingAddress.City,
-			Street:     order.ShippingAddress.Street,
-			PostalCode: order.ShippingAddress.PostalCode,
-			House:      order.ShippingAddress.House,
-			Apartment:  order.ShippingAddress.Apartment,
-		},
-		Payment: sharedevents.PaymentDetails{
-			Method:        order.Payment.Method.String(),
-			MethodDetails: order.Payment.MethodDetails,
-		},
-		Items: items,
-	}
 }
