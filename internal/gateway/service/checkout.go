@@ -53,11 +53,20 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 		return nil, err
 	}
 
+	paymentMethod, err := normalizePaymentMethod(in.Payment.Method)
+	if err != nil {
+		return nil, err
+	}
+
 	orderResp, err := s.orderClient.CreateOrder(opCtx, &orderclient.CreateOrderRequest{
 		CustomerID:      strings.TrimSpace(in.CustomerID),
 		Items:           orderItems,
 		ShippingAddress: mapAddressToOrderClient(in.ShippingAddress),
 		IdempotencyKey:  strings.TrimSpace(in.IdempotencyKey),
+		Payment: orderclient.PaymentDetails{
+			Method:        paymentMethod,
+			MethodDetails: strings.TrimSpace(in.Payment.MethodDetails),
+		},
 	})
 	if err != nil {
 		return nil, wrapDownstreamError("order create", err)
@@ -84,11 +93,6 @@ func (s *GatewayService) Checkout(ctx context.Context, in *CheckoutInput) (*Chec
 	totalAmount := order.TotalAmount
 	if totalAmount.AmountCents <= 0 || strings.TrimSpace(totalAmount.Currency) == "" {
 		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, fmt.Errorf("%w: order total amount is empty", ErrDownstreamFailed))
-	}
-
-	paymentMethod, err := normalizePaymentMethod(in.Payment.Method)
-	if err != nil {
-		return nil, s.compensateCheckoutFailure(order.ID, reservedItems, err)
 	}
 
 	paymentCurrency, err := normalizeCurrency(totalAmount.Currency)

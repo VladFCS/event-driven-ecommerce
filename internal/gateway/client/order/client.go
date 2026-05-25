@@ -36,11 +36,20 @@ func (c *GRPCClient) CreateOrder(ctx context.Context, req *CreateOrderRequest) (
 		return nil, err
 	}
 
+	paymentMethod, paymentMethodDetails, err := mapPaymentDetailsToProto(req.Payment)
+	if err != nil {
+		return nil, err
+	}
+
 	grpcResp, err := c.grpcClient.CreateOrder(requestid.WithOutgoingMetadata(ctx), &orderv1.CreateOrderRequest{
 		CustomerId:      req.CustomerID,
 		Items:           items,
 		ShippingAddress: mapAddressToProto(req.ShippingAddress),
 		IdempotencyKey:  req.IdempotencyKey,
+		Payment: &orderv1.PaymentDetails{
+			Method:        paymentMethod,
+			MethodDetails: paymentMethodDetails,
+		},
 	})
 	if err != nil {
 		return nil, err

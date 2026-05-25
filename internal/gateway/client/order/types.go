@@ -14,6 +14,11 @@ type Address struct {
 	Apartment  string
 }
 
+type PaymentDetails struct {
+	Method        string
+	MethodDetails string
+}
+
 type CreateOrderItem struct {
 	ProductID   string
 	SKU         string
@@ -38,6 +43,7 @@ type Order struct {
 	TotalAmount     Money
 	Status          string
 	ShippingAddress Address
+	Payment         PaymentDetails
 	CreatedAt       string
 	UpdatedAt       string
 }
@@ -47,6 +53,7 @@ type CreateOrderRequest struct {
 	Items           []CreateOrderItem
 	ShippingAddress Address
 	IdempotencyKey  string
+	Payment         PaymentDetails
 }
 
 type CreateOrderResponse struct {

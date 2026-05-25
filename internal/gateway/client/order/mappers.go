@@ -38,6 +38,15 @@ func mapAddressToProto(address Address) *orderv1.Address {
 	}
 }
 
+func mapPaymentDetailsToProto(payment PaymentDetails) (orderv1.PaymentMethodType, string, error) {
+	method, err := parsePaymentMethod(payment.Method)
+	if err != nil {
+		return orderv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, "", err
+	}
+
+	return method, strings.TrimSpace(payment.MethodDetails), nil
+}
+
 func mapMoneyToProto(money Money) (*orderv1.Money, error) {
 	currency, err := parseCurrency(money.Currency)
 	if err != nil {
@@ -62,6 +71,7 @@ func mapProtoOrder(order *orderv1.Order) *Order {
 		TotalAmount:     mapProtoMoney(order.GetTotalAmount()),
 		Status:          order.GetStatus().String(),
 		ShippingAddress: mapProtoAddress(order.GetShippingAddress()),
+		Payment:         mapProtoPaymentDetails(order.GetPayment()),
 		CreatedAt:       order.GetCreatedAt(),
 		UpdatedAt:       order.GetUpdatedAt(),
 	}
@@ -124,6 +134,17 @@ func mapProtoAddress(address *orderv1.Address) Address {
 	}
 }
 
+func mapProtoPaymentDetails(details *orderv1.PaymentDetails) PaymentDetails {
+	if details == nil {
+		return PaymentDetails{}
+	}
+
+	return PaymentDetails{
+		Method:        details.GetMethod().String(),
+		MethodDetails: details.GetMethodDetails(),
+	}
+}
+
 func parseCurrency(value string) (orderv1.Currency, error) {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "USD", "CURRENCY_USD":
@@ -132,5 +153,16 @@ func parseCurrency(value string) (orderv1.Currency, error) {
 		return orderv1.Currency_CURRENCY_EUR, nil
 	default:
 		return orderv1.Currency_CURRENCY_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedOrderCurrency, value)
+	}
+}
+
+func parsePaymentMethod(value string) (orderv1.PaymentMethodType, error) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "CARD", "PAYMENT_METHOD_TYPE_CARD":
+		return orderv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CARD, nil
+	case "CASH", "PAYMENT_METHOD_TYPE_CASH":
+		return orderv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CASH, nil
+	default:
+		return orderv1.PaymentMethodType_PAYMENT_METHOD_TYPE_UNSPECIFIED, fmt.Errorf("%w: %q", ErrUnsupportedPaymentMethod, value)
 	}
 }

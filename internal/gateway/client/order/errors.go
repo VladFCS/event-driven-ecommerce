@@ -9,4 +9,5 @@ var (
 	ErrOrderIDRequired          = errors.New("order id is required")
 	ErrCustomerIDRequired       = errors.New("customer id is required")
 	ErrUnsupportedOrderCurrency = errors.New("unsupported order currency")
+	ErrUnsupportedPaymentMethod = errors.New("unsupported payment method")
 )
