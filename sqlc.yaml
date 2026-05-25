@@ -27,3 +27,16 @@ sql:
         emit_json_tags: true
         emit_empty_slices: true
         emit_interface: false
+  - engine: "postgresql"
+    schema:
+      - "db/schema/inventory.sql"
+    queries:
+      - "db/queries/inventory.sql"
+    gen:
+      go:
+        package: "inventorydb"
+        out: "internal/inventory/repository/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_interface: false
