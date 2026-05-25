@@ -146,6 +146,10 @@ func toOrderCreatedEvent(order domain.Order) sharedevents.OrderCreated {
 			House:      order.ShippingAddress.House,
 			Apartment:  order.ShippingAddress.Apartment,
 		},
+		Payment: sharedevents.PaymentDetails{
+			Method:        order.Payment.Method.String(),
+			MethodDetails: order.Payment.MethodDetails,
+		},
 		Items: items,
 	}
 }

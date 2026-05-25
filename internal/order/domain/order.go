@@ -11,8 +11,8 @@ var (
 	ErrOrderNotFound      = errors.New("order not found")
 	ErrInvalidOrder       = errors.New("invalid order")
 	ErrOrderAlreadyExists = errors.New("order already exists")
-	ErrInvalidOrderID = errors.New("invalid order id")
-	ErrInvalidCustomerID = errors.New("invalid customer id")
+	ErrInvalidOrderID     = errors.New("invalid order id")
+	ErrInvalidCustomerID  = errors.New("invalid customer id")
 )
 
 type Money struct {
@@ -38,6 +38,11 @@ type Address struct {
 	Apartment  string
 }
 
+type PaymentDetails struct {
+	Method        orderv1.PaymentMethodType
+	MethodDetails string
+}
+
 type Order struct {
 	ID              string
 	CustomerID      string
@@ -45,6 +50,7 @@ type Order struct {
 	TotalAmount     Money
 	Status          orderv1.OrderStatus
 	ShippingAddress Address
+	Payment         PaymentDetails
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

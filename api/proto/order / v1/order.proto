@@ -27,9 +27,20 @@ enum Currency {
   CURRENCY_EUR = 2;
 }
 
+enum PaymentMethodType {
+  PAYMENT_METHOD_TYPE_UNSPECIFIED = 0;
+  PAYMENT_METHOD_TYPE_CARD = 1;
+  PAYMENT_METHOD_TYPE_CASH = 2;
+}
+
 message Money {
   Currency currency = 1;
   int64 amount_cents = 2;
+}
+
+message PaymentDetails {
+  PaymentMethodType method = 1;
+  string method_details = 2;
 }
 
 message OrderItem {
@@ -67,6 +78,7 @@ message Order {
   Address shipping_address = 6;
   string created_at = 7;
   string updated_at = 8;
+  PaymentDetails payment = 9;
 }
 
 message CreateOrderRequest {
@@ -74,6 +86,7 @@ message CreateOrderRequest {
   repeated CreateOrderItem items = 2;
   Address shipping_address = 3;
   string idempotency_key = 4;
+  PaymentDetails payment = 5;
 }
 
 message CreateOrderResponse {

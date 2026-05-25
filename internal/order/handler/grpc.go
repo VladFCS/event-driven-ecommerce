@@ -33,6 +33,7 @@ func (h *GRPCHandler) CreateOrder(ctx context.Context, req *orderv1.CreateOrderR
 		CustomerID:      req.GetCustomerId(),
 		Items:           convertCreateOrderItems(req.GetItems()),
 		ShippingAddress: convertAddress(req.GetShippingAddress()),
+		Payment:         convertPaymentDetails(req.GetPayment()),
 	})
 	if err != nil {
 		return nil, mapOrderError(err)
@@ -195,6 +196,24 @@ func convertAddressToProto(address domain.Address) *orderv1.Address {
 	}
 }
 
+func convertPaymentDetails(details *orderv1.PaymentDetails) domain.PaymentDetails {
+	if details == nil {
+		return domain.PaymentDetails{}
+	}
+
+	return domain.PaymentDetails{
+		Method:        details.GetMethod(),
+		MethodDetails: details.GetMethodDetails(),
+	}
+}
+
+func convertPaymentDetailsToProto(details domain.PaymentDetails) *orderv1.PaymentDetails {
+	return &orderv1.PaymentDetails{
+		Method:        details.Method,
+		MethodDetails: details.MethodDetails,
+	}
+}
+
 func convertOrderToProto(order domain.Order) *orderv1.Order {
 	return &orderv1.Order{
 		OrderId:         order.ID,
@@ -203,6 +222,7 @@ func convertOrderToProto(order domain.Order) *orderv1.Order {
 		TotalAmount:     convertMoneyToProto(order.TotalAmount),
 		Status:          order.Status,
 		ShippingAddress: convertAddressToProto(order.ShippingAddress),
+		Payment:         convertPaymentDetailsToProto(order.Payment),
 		CreatedAt:       order.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       order.UpdatedAt.Format(time.RFC3339),
 	}

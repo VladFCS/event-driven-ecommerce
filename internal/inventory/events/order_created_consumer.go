@@ -127,6 +127,8 @@ func (c *OrderCreatedConsumer) handleMessage(ctx context.Context, msg kafka.Mess
 	if err := c.publisher.PublishInventoryReserved(ctx, envelope.EventID, sharedevents.InventoryReserved{
 		OrderID:    event.OrderID,
 		CustomerID: event.CustomerID,
+		Amount:     event.TotalAmount,
+		Payment:    event.Payment,
 		Items:      reservedItems,
 	}); err != nil {
 		return false, err
