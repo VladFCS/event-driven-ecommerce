@@ -33,6 +33,7 @@ POSTGRES_DB ?= ecommerce
 POSTGRES_USER ?= app
 POSTGRES_PASSWORD ?= app
 PAYMENT_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
+ORDER_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
@@ -151,10 +152,10 @@ run-payment-kafka: ## Run payment-service against the local Redpanda broker and 
 	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
 run-order: ## Run order-service (requires KAFKA_BROKERS)
-	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-order-kafka: ## Run order-service against the local Redpanda broker
-	KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-gateway: ## Run gateway-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(GATEWAY_CMD)

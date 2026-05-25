@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -11,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/order/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
@@ -32,79 +33,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	now := time.Now()
-	repository := repository.NewMemoryRepository([]domain.Order{
-		{
-			ID:         "ord-100",
-			CustomerID: "cust-100",
-			Items: []domain.OrderItem{
-				{
-					ProductID:   "p-100",
-					SKU:         "kbd-100",
-					ProductName: "Mechanical Keyboard",
-					Quantity:    1,
-					UnitPrice: domain.Money{
-						Currency:    orderv1.Currency_CURRENCY_USD,
-						AmountCents: 12999,
-					},
-					TotalPrice: domain.Money{
-						Currency:    orderv1.Currency_CURRENCY_USD,
-						AmountCents: 12999,
-					},
-				},
-			},
-			TotalAmount: domain.Money{
-				Currency:    orderv1.Currency_CURRENCY_USD,
-				AmountCents: 12999,
-			},
-			Status: orderv1.OrderStatus_ORDER_STATUS_AWAITING_PAYMENT,
-			ShippingAddress: domain.Address{
-				Country:    "US",
-				City:       "New York",
-				Street:     "5th Avenue",
-				PostalCode: "10001",
-				House:      "1A",
-				Apartment:  "10",
-			},
-			CreatedAt: now,
-			UpdatedAt: now,
-		},
-		{
-			ID:         "ord-200",
-			CustomerID: "cust-200",
-			Items: []domain.OrderItem{
-				{
-					ProductID:   "p-200",
-					SKU:         "mse-200",
-					ProductName: "Wireless Mouse",
-					Quantity:    2,
-					UnitPrice: domain.Money{
-						Currency:    orderv1.Currency_CURRENCY_EUR,
-						AmountCents: 5999,
-					},
-					TotalPrice: domain.Money{
-						Currency:    orderv1.Currency_CURRENCY_EUR,
-						AmountCents: 11998,
-					},
-				},
-			},
-			TotalAmount: domain.Money{
-				Currency:    orderv1.Currency_CURRENCY_EUR,
-				AmountCents: 11998,
-			},
-			Status: orderv1.OrderStatus_ORDER_STATUS_CANCELLED,
-			ShippingAddress: domain.Address{
-				Country:    "DE",
-				City:       "Berlin",
-				Street:     "Unter den Linden",
-				PostalCode: "10117",
-				House:      "7",
-				Apartment:  "",
-			},
-			CreatedAt: now.Add(-1 * time.Hour),
-			UpdatedAt: now,
-		},
-	})
+	orderRepository, closeRepository, err := newOrderRepository(log)
+	if err != nil {
+		log.Error("failed to configure order repository", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer closeRepository()
 
 	publisher, closePublisher, err := newOrderEventPublisher(log)
 	if err != nil {
@@ -117,7 +51,7 @@ func main() {
 		}
 	}()
 
-	service := service.NewOrderService(repository, publisher)
+	service := service.NewOrderService(orderRepository, publisher)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	server := grpc.NewServer(
@@ -154,6 +88,30 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newOrderRepository(logger *slog.Logger) (repository.OrderRepository, func(), error) {
+	databaseURL := strings.TrimSpace(getenv("ORDER_DATABASE_URL", ""))
+	if databaseURL == "" {
+		return nil, nil, errors.New("ORDER_DATABASE_URL is required")
+	}
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect to postgres: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, nil, fmt.Errorf("ping postgres: %w", err)
+	}
+
+	logger.Info("configured postgres order repository")
+
+	return repository.NewPostgresRepository(pool), pool.Close, nil
 }
 
 func newOrderEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
