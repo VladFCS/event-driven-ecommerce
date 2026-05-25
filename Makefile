@@ -7,12 +7,15 @@ GOVULNCHECK ?= govulncheck
 GOVULNCHECK_PKG ?= golang.org/x/vuln/cmd/govulncheck@latest
 SQLC ?= sqlc
 SQLC_PKG ?= github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+MIGRATE ?= migrate
+MIGRATE_PKG ?= github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 GOFLAGS ?= -buildvcs=false
 GOCACHE ?= $(CURDIR)/.cache/go-build
 BIN_DIR ?= $(CURDIR)/bin
 PROTO_DIR := api/proto
 GEN_DIR := gen
 MODULE := github.com/vladfc/event-driven-ecommerce-app
+DB_MIGRATIONS_DIR := db/migrations
 
 CATALOG_CMD := ./cmd/catalog-service
 INVENTORY_CMD := ./cmd/inventory-service
@@ -34,7 +37,8 @@ PAYMENT_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTG
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
 	run-catalog run-inventory run-inventory-kafka run-payment run-payment-kafka run-order run-order-kafka run-gateway run-services \
-	kafka-up kafka-down kafka-logs db-up db-down db-logs sqlc-install sqlc-generate sqlc-verify
+	kafka-up kafka-down kafka-logs db-up db-down db-logs db-prepare db-migrate-up db-migrate-down db-migrate-version \
+	migrate-install sqlc-install sqlc-generate sqlc-verify
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -47,6 +51,7 @@ doctor: ## Check required local tooling
 	@command -v protoc-gen-go >/dev/null || { echo "protoc-gen-go is not installed or not in PATH"; exit 1; }
 	@command -v protoc-gen-go-grpc >/dev/null || { echo "protoc-gen-go-grpc is not installed or not in PATH"; exit 1; }
 	@command -v $(SQLC) >/dev/null || { echo "$(SQLC) is not installed or not in PATH"; exit 1; }
+	@command -v $(MIGRATE) >/dev/null || { echo "$(MIGRATE) is not installed or not in PATH"; echo "install it with: make migrate-install"; exit 1; }
 	@echo "tooling looks good"
 
 fmt: ## Format Go code
@@ -73,6 +78,9 @@ govulncheck: ## Run Go vulnerability scan
 
 govulncheck-install: ## Install or rebuild govulncheck with the current Go toolchain
 	GOCACHE=$(GOCACHE) $(GO) install $(GOVULNCHECK_PKG)
+
+migrate-install: ## Install or rebuild golang-migrate with the current Go toolchain
+	GOCACHE=$(GOCACHE) $(GO) install -tags 'postgres' $(MIGRATE_PKG)
 
 sqlc-install: ## Install or rebuild sqlc with the current Go toolchain
 	GOCACHE=$(GOCACHE) $(GO) install $(SQLC_PKG)
@@ -137,10 +145,10 @@ run-inventory-kafka: ## Run inventory-service against the local Redpanda broker 
 	KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
 
 run-payment: ## Run payment-service
-	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
+	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
 run-payment-kafka: ## Run payment-service against the local Redpanda broker and Redis
-	KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
+	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
 run-order: ## Run order-service (requires KAFKA_BROKERS)
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
@@ -169,9 +177,21 @@ db-down: ## Stop local PostgreSQL
 db-logs: ## Tail local PostgreSQL logs
 	$(COMPOSE) logs -f postgres
 
+db-prepare: db-up db-migrate-up ## Start PostgreSQL and apply payment migrations
+
+db-migrate-up: ## Apply payment-service PostgreSQL migrations
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" up
+
+db-migrate-down: ## Roll back the most recent payment-service PostgreSQL migration
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" down 1
+
+db-migrate-version: ## Show the current payment-service PostgreSQL migration version
+	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(PAYMENT_DATABASE_URL)" version
+
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
 	@echo "  make kafka-up"
+	@echo "  make db-prepare"
 	@echo "  make run-catalog"
 	@echo "  make run-inventory-kafka"
 	@echo "  make run-payment-kafka"

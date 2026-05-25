@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
-	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/repository"
@@ -35,33 +35,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	now := time.Now()
-	repository := repository.NewMemoryRepository([]domain.Payment{
-		{
-			ID:             "pay-100",
-			OrderID:        "ord-100",
-			CustomerID:     "cust-100",
-			Amount:         domain.Money{Currency: paymentv1.Currency_CURRENCY_USD, AmountCents: 12999},
-			PaymentMethod:  paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CARD,
-			IdempotencyKey: "idem-pay-100",
-			Status:         paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING,
-			CreatedAt:      now,
-			UpdatedAt:      now,
-		},
-		{
-			ID:             "pay-200",
-			OrderID:        "ord-200",
-			CustomerID:     "cust-200",
-			Amount:         domain.Money{Currency: paymentv1.Currency_CURRENCY_EUR, AmountCents: 5999},
-			PaymentMethod:  paymentv1.PaymentMethodType_PAYMENT_METHOD_TYPE_CASH,
-			IdempotencyKey: "idem-pay-200",
-			Status:         paymentv1.PaymentStatus_PAYMENT_STATUS_CAPTURED,
-			CreatedAt:      now,
-			UpdatedAt:      now,
-		},
-	})
+	paymentRepository, closeRepository, err := newPaymentRepository(log)
+	if err != nil {
+		log.Error("failed to configure payment repository", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer closeRepository()
 
-	service := service.NewPaymentService(repository)
+	service := service.NewPaymentService(paymentRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
 	publisher, closePublisher, err := newPaymentEventPublisher(log)
@@ -139,6 +120,30 @@ func getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func newPaymentRepository(logger *slog.Logger) (repository.PaymentRepository, func(), error) {
+	databaseURL := strings.TrimSpace(getenv("PAYMENT_DATABASE_URL", ""))
+	if databaseURL == "" {
+		return nil, nil, errors.New("PAYMENT_DATABASE_URL is required")
+	}
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect to postgres: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, nil, fmt.Errorf("ping postgres: %w", err)
+	}
+
+	logger.Info("configured postgres payment repository")
+
+	return repository.NewPostgresRepository(pool), pool.Close, nil
 }
 
 func newPaymentEventPublisher(logger *slog.Logger) (events.Publisher, func() error, error) {
