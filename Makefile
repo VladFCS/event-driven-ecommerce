@@ -5,6 +5,8 @@ PROTOC ?= protoc
 GOFMT ?= gofmt
 GOVULNCHECK ?= govulncheck
 GOVULNCHECK_PKG ?= golang.org/x/vuln/cmd/govulncheck@latest
+SQLC ?= sqlc
+SQLC_PKG ?= github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 GOFLAGS ?= -buildvcs=false
 GOCACHE ?= $(CURDIR)/.cache/go-build
 BIN_DIR ?= $(CURDIR)/bin
@@ -22,11 +24,17 @@ COMPOSE ?= docker compose
 KAFKA_BROKERS ?= localhost:19092
 KAFKA_ORDER_CREATED_TOPIC ?= orders.created
 REDIS_ADDR ?= localhost:6379
+POSTGRES_HOST ?= localhost
+POSTGRES_PORT ?= 5432
+POSTGRES_DB ?= ecommerce
+POSTGRES_USER ?= app
+POSTGRES_PASSWORD ?= app
+PAYMENT_DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
 	run-catalog run-inventory run-inventory-kafka run-payment run-payment-kafka run-order run-order-kafka run-gateway run-services \
-	kafka-up kafka-down kafka-logs
+	kafka-up kafka-down kafka-logs db-up db-down db-logs sqlc-install sqlc-generate sqlc-verify
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -38,6 +46,7 @@ doctor: ## Check required local tooling
 	@command -v $(PROTOC) >/dev/null || { echo "$(PROTOC) is not installed or not in PATH"; exit 1; }
 	@command -v protoc-gen-go >/dev/null || { echo "protoc-gen-go is not installed or not in PATH"; exit 1; }
 	@command -v protoc-gen-go-grpc >/dev/null || { echo "protoc-gen-go-grpc is not installed or not in PATH"; exit 1; }
+	@command -v $(SQLC) >/dev/null || { echo "$(SQLC) is not installed or not in PATH"; exit 1; }
 	@echo "tooling looks good"
 
 fmt: ## Format Go code
@@ -64,6 +73,15 @@ govulncheck: ## Run Go vulnerability scan
 
 govulncheck-install: ## Install or rebuild govulncheck with the current Go toolchain
 	GOCACHE=$(GOCACHE) $(GO) install $(GOVULNCHECK_PKG)
+
+sqlc-install: ## Install or rebuild sqlc with the current Go toolchain
+	GOCACHE=$(GOCACHE) $(GO) install $(SQLC_PKG)
+
+sqlc-generate: ## Generate Go code from SQL using sqlc
+	$(SQLC) generate
+
+sqlc-verify: ## Verify sqlc configuration and generated code are up to date
+	$(SQLC) vet
 
 check: vet test govulncheck ## Run the default verification suite
 
@@ -141,6 +159,15 @@ kafka-down: ## Stop local Redpanda + Console
 
 kafka-logs: ## Tail local Redpanda + Console + Redis logs
 	$(COMPOSE) logs -f redpanda redpanda-console redis
+
+db-up: ## Start local PostgreSQL
+	$(COMPOSE) up -d postgres
+
+db-down: ## Stop local PostgreSQL
+	$(COMPOSE) stop postgres
+
+db-logs: ## Tail local PostgreSQL logs
+	$(COMPOSE) logs -f postgres
 
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
