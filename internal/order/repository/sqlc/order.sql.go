@@ -297,6 +297,27 @@ func (q *Queries) GetOrderByID(ctx context.Context, id string) (Order, error) {
 	return i, err
 }
 
+const getOrderOutboxStats = `-- name: GetOrderOutboxStats :one
+SELECT
+    COUNT(*) FILTER (WHERE published_at IS NULL) AS pending_count,
+    COUNT(*) FILTER (WHERE published_at IS NULL AND attempt_count > 0) AS retrying_count,
+    MIN(created_at) FILTER (WHERE published_at IS NULL) AS oldest_pending_created_at
+FROM order_outbox_events
+`
+
+type GetOrderOutboxStatsRow struct {
+	PendingCount           int64       `json:"pending_count"`
+	RetryingCount          int64       `json:"retrying_count"`
+	OldestPendingCreatedAt interface{} `json:"oldest_pending_created_at"`
+}
+
+func (q *Queries) GetOrderOutboxStats(ctx context.Context) (GetOrderOutboxStatsRow, error) {
+	row := q.db.QueryRow(ctx, getOrderOutboxStats)
+	var i GetOrderOutboxStatsRow
+	err := row.Scan(&i.PendingCount, &i.RetryingCount, &i.OldestPendingCreatedAt)
+	return i, err
+}
+
 const listOrderItemsByOrderID = `-- name: ListOrderItemsByOrderID :many
 SELECT order_id, item_position, product_id, sku, product_name, quantity, unit_price_currency, unit_price_amount_cents, total_price_currency, total_price_amount_cents
 FROM order_items

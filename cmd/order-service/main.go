@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -59,6 +60,19 @@ func main() {
 		}
 	}()
 
+	outboxConfig, err := newOutboxDispatcherConfig()
+	if err != nil {
+		log.Error("failed to configure order outbox dispatcher", slog.Any("error", err))
+		os.Exit(1)
+	}
+	log.Info(
+		"configured order outbox dispatcher",
+		slog.String("poll_interval", outboxConfig.PollInterval.String()),
+		slog.String("lock_timeout", outboxConfig.LockTimeout.String()),
+		slog.String("publish_timeout", outboxConfig.PublishTimeout.String()),
+		slog.Int("batch_size", int(outboxConfig.BatchSize)),
+	)
+
 	service := service.NewOrderService(orderRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
@@ -72,7 +86,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log)
+	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log, outboxConfig)
 	serverErrCh := make(chan error, 1)
 	workerErrCh := make(chan error, 1)
 
@@ -176,4 +190,57 @@ func parseKafkaBrokers(raw string) []string {
 		}
 	}
 	return brokers
+}
+
+func newOutboxDispatcherConfig() (events.OutboxDispatcherConfig, error) {
+	cfg := events.DefaultOutboxDispatcherConfig()
+
+	pollInterval, err := parseDurationEnv("ORDER_OUTBOX_POLL_INTERVAL", cfg.PollInterval)
+	if err != nil {
+		return events.OutboxDispatcherConfig{}, err
+	}
+	lockTimeout, err := parseDurationEnv("ORDER_OUTBOX_LOCK_TIMEOUT", cfg.LockTimeout)
+	if err != nil {
+		return events.OutboxDispatcherConfig{}, err
+	}
+	publishTimeout, err := parseDurationEnv("ORDER_OUTBOX_PUBLISH_TIMEOUT", cfg.PublishTimeout)
+	if err != nil {
+		return events.OutboxDispatcherConfig{}, err
+	}
+	batchSize, err := parseInt32Env("ORDER_OUTBOX_BATCH_SIZE", cfg.BatchSize)
+	if err != nil {
+		return events.OutboxDispatcherConfig{}, err
+	}
+
+	cfg.PollInterval = pollInterval
+	cfg.LockTimeout = lockTimeout
+	cfg.PublishTimeout = publishTimeout
+	cfg.BatchSize = batchSize
+
+	if err := cfg.Validate(); err != nil {
+		return events.OutboxDispatcherConfig{}, err
+	}
+
+	return cfg, nil
+}
+
+func parseDurationEnv(key string, fallback time.Duration) (time.Duration, error) {
+	raw := strings.TrimSpace(getenv(key, fallback.String()))
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return value, nil
+}
+
+func parseInt32Env(key string, fallback int32) (int32, error) {
+	raw := strings.TrimSpace(getenv(key, strconv.Itoa(int(fallback))))
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	if value > int(^uint32(0)>>1) {
+		return 0, fmt.Errorf("parse %s: value %d exceeds int32 range", key, value)
+	}
+	return int32(value), nil
 }

@@ -138,3 +138,10 @@ SET
     attempt_count = attempt_count + 1,
     last_error = $2
 WHERE id = $1;
+
+-- name: GetOrderOutboxStats :one
+SELECT
+    COUNT(*) FILTER (WHERE published_at IS NULL) AS pending_count,
+    COUNT(*) FILTER (WHERE published_at IS NULL AND attempt_count > 0) AS retrying_count,
+    MIN(created_at) FILTER (WHERE published_at IS NULL) AS oldest_pending_created_at
+FROM order_outbox_events;
