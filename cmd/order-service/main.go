@@ -73,17 +73,37 @@ func main() {
 	defer stop()
 
 	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log)
-	go outboxDispatcher.Run(ctx)
+	serverErrCh := make(chan error, 1)
+	workerErrCh := make(chan error, 1)
+
+	go func() {
+		if err := outboxDispatcher.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			workerErrCh <- err
+			return
+		}
+		if ctx.Err() == nil {
+			workerErrCh <- errors.New("outbox dispatcher stopped unexpectedly")
+		}
+	}()
 
 	go func() {
 		log.Info("order-service started", slog.String("grpc_port", grpcPort))
 		if serveErr := server.Serve(lis); serveErr != nil {
-			log.Error("grpc server stopped with error", slog.Any("error", serveErr))
-			stop()
+			serverErrCh <- serveErr
 		}
 	}()
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	case err := <-serverErrCh:
+		log.Error("grpc server stopped with error", slog.Any("error", err))
+		stop()
+	case err := <-workerErrCh:
+		log.Error("outbox dispatcher stopped with error", slog.Any("error", err))
+		stop()
+	}
+
 	log.Info("shutting down order-service")
 	server.GracefulStop()
 }

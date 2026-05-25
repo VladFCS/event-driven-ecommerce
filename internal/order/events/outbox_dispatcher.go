@@ -2,7 +2,9 @@ package events
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,10 +36,16 @@ func NewOutboxDispatcher(pool *pgxpool.Pool, publisher Publisher, logger *slog.L
 	}
 }
 
-func (d *OutboxDispatcher) Run(ctx context.Context) {
+func (d *OutboxDispatcher) Run(ctx context.Context) (err error) {
 	if d == nil || d.publisher == nil {
-		return
+		return fmt.Errorf("outbox dispatcher is not configured")
 	}
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("outbox dispatcher panic: %v\n%s", recovered, debug.Stack())
+		}
+	}()
 
 	ticker := time.NewTicker(d.pollInterval)
 	defer ticker.Stop()
@@ -47,7 +55,7 @@ func (d *OutboxDispatcher) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-ticker.C:
 			d.dispatchOnce(ctx)
 		}
