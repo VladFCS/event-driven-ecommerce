@@ -36,6 +36,11 @@ enum PaymentMethodType {
   PAYMENT_METHOD_TYPE_CASH = 2;
 }
 
+message PaymentDetails {
+  PaymentMethodType method = 1;
+  string method_details = 2;
+}
+
 message Money {
   Currency currency = 1;
   int64 amount_cents = 2;
