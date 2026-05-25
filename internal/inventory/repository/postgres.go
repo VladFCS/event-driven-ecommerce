@@ -105,6 +105,85 @@ func (r *PostgresRepository) ReserveStock(ctx context.Context, reservation domai
 	return mapDBStock(row)
 }
 
+func (r *PostgresRepository) ReleaseStock(ctx context.Context, reservation domain.StockReservation) (domain.Stock, error) {
+	if err := validateStockReservation(reservation); err != nil {
+		return domain.Stock{}, err
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Stock{}, fmt.Errorf("begin release stock transaction: %w", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	qtx := r.queries.WithTx(tx)
+	if _, err := qtx.GetStockByProductIDForUpdate(ctx, reservation.ProductID); err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Stock{}, domain.ErrStockNotFound
+		}
+
+		return domain.Stock{}, fmt.Errorf("get stock by id from postgres for update: %w", err)
+	}
+
+	reserved, err := qtx.GetReservationByProductIDAndOrderIDForUpdate(ctx, inventorydb.GetReservationByProductIDAndOrderIDForUpdateParams{
+		ProductID: reservation.ProductID,
+		OrderID:   reservation.OrderID,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Stock{}, domain.ErrReservationNotFound
+		}
+
+		return domain.Stock{}, fmt.Errorf("get inventory reservation from postgres for update: %w", err)
+	}
+
+	if reserved.Quantity < reservation.Quantity {
+		return domain.Stock{}, domain.ErrReservationNotFound
+	}
+
+	now := time.Now().UTC()
+	nowTz := pgtype.Timestamptz{
+		Time:  now,
+		Valid: true,
+	}
+
+	row, err := qtx.ReleaseInventoryStock(ctx, inventorydb.ReleaseInventoryStockParams{
+		ProductID:         reservation.ProductID,
+		AvailableQuantity: reservation.Quantity,
+		UpdatedAt:         nowTz,
+	})
+	if err != nil {
+		return domain.Stock{}, fmt.Errorf("release stock in postgres: %w", err)
+	}
+
+	if reserved.Quantity == reservation.Quantity {
+		if err := qtx.DeleteInventoryReservation(ctx, inventorydb.DeleteInventoryReservationParams{
+			ProductID: reservation.ProductID,
+			OrderID:   reservation.OrderID,
+		}); err != nil {
+			return domain.Stock{}, fmt.Errorf("delete inventory reservation in postgres: %w", err)
+		}
+	} else {
+		if err := qtx.UpdateInventoryReservationQuantity(ctx, inventorydb.UpdateInventoryReservationQuantityParams{
+			ProductID: reservation.ProductID,
+			OrderID:   reservation.OrderID,
+			Quantity:  reserved.Quantity - reservation.Quantity,
+			UpdatedAt: nowTz,
+		}); err != nil {
+			return domain.Stock{}, fmt.Errorf("update inventory reservation quantity in postgres: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Stock{}, fmt.Errorf("commit release stock transaction: %w", err)
+	}
+
+	return mapDBStock(row)
+}
+
 func validateStockReservation(reservation domain.StockReservation) error {
 	if strings.TrimSpace(reservation.OrderID) == "" ||
 		strings.TrimSpace(reservation.ProductID) == "" ||
