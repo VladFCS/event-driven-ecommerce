@@ -25,24 +25,24 @@ func (s *InventoryService) GetStockByProductID(ctx context.Context, productID st
 	return s.repository.GetStockByProductID(ctx, productID)
 }
 
-func (s *InventoryService) ReserveStock(ctx context.Context, productID string, quantity int64, orderID string) (domain.Stock, error) {
-	if err := validateReservationRequest(productID, quantity, orderID); err != nil {
+func (s *InventoryService) ReserveStock(ctx context.Context, reservation domain.StockReservation) (domain.Stock, error) {
+	if err := validateReservationRequest(reservation); err != nil {
 		return domain.Stock{}, err
 	}
 
-	return s.repository.ReserveStock(ctx, productID, quantity, orderID)
+	return s.repository.ReserveStock(ctx, reservation)
 }
 
-func (s *InventoryService) ReleaseStock(ctx context.Context, productID string, quantity int64, orderID string) (domain.Stock, error) {
-	if err := validateReservationRequest(productID, quantity, orderID); err != nil {
+func (s *InventoryService) ReleaseStock(ctx context.Context, reservation domain.StockReservation) (domain.Stock, error) {
+	if err := validateReservationRequest(reservation); err != nil {
 		return domain.Stock{}, err
 	}
 
-	return s.repository.ReleaseStock(ctx, productID, quantity, orderID)
+	return s.repository.ReleaseStock(ctx, reservation)
 }
 
-func validateReservationRequest(productID string, quantity int64, orderID string) error {
-	if strings.TrimSpace(productID) == "" || strings.TrimSpace(orderID) == "" || quantity <= 0 {
+func validateReservationRequest(reservation domain.StockReservation) error {
+	if strings.TrimSpace(reservation.ProductID) == "" || strings.TrimSpace(reservation.OrderID) == "" || reservation.Quantity <= 0 {
 		return domain.ErrInvalidStock
 	}
 

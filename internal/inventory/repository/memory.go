@@ -39,66 +39,66 @@ func (r *MemoryRepository) GetStockByProductID(ctx context.Context, productID st
 	return cloneStock(stock), nil
 }
 
-func (r *MemoryRepository) ReserveStock(ctx context.Context, productID string, quantity int64, orderID string) (domain.Stock, error) {
+func (r *MemoryRepository) ReserveStock(ctx context.Context, reservation domain.StockReservation) (domain.Stock, error) {
 	_ = ctx
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	stock, ok := r.inventory[productID]
+	stock, ok := r.inventory[reservation.ProductID]
 	if !ok {
 		return domain.Stock{}, domain.ErrStockNotFound
 	}
 
-	if quantity > stock.AvailableQuantity {
+	if reservation.Quantity > stock.AvailableQuantity {
 		return domain.Stock{}, domain.ErrInsufficientStock
 	}
 
-	if _, ok := r.reservations[productID]; !ok {
-		r.reservations[productID] = make(map[string]int64)
+	if _, ok := r.reservations[reservation.ProductID]; !ok {
+		r.reservations[reservation.ProductID] = make(map[string]int64)
 	}
 
-	stock.AvailableQuantity -= quantity
-	stock.ReservedQuantity += quantity
-	r.inventory[productID] = stock
-	r.reservations[productID][orderID] += quantity
+	stock.AvailableQuantity -= reservation.Quantity
+	stock.ReservedQuantity += reservation.Quantity
+	r.inventory[reservation.ProductID] = stock
+	r.reservations[reservation.ProductID][reservation.OrderID] += reservation.Quantity
 
 	return cloneStock(stock), nil
 }
 
-func (r *MemoryRepository) ReleaseStock(ctx context.Context, productID string, quantity int64, orderID string) (domain.Stock, error) {
+func (r *MemoryRepository) ReleaseStock(ctx context.Context, reservation domain.StockReservation) (domain.Stock, error) {
 	_ = ctx
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	stock, ok := r.inventory[productID]
+	stock, ok := r.inventory[reservation.ProductID]
 	if !ok {
 		return domain.Stock{}, domain.ErrStockNotFound
 	}
 
-	productReservations, ok := r.reservations[productID]
+	productReservations, ok := r.reservations[reservation.ProductID]
 	if !ok {
 		return domain.Stock{}, domain.ErrReservationNotFound
 	}
 
-	reservedForOrder, ok := productReservations[orderID]
-	if !ok || reservedForOrder < quantity {
+	reservedForOrder, ok := productReservations[reservation.OrderID]
+	if !ok || reservedForOrder < reservation.Quantity {
 		return domain.Stock{}, domain.ErrReservationNotFound
 	}
 
-	stock.AvailableQuantity += quantity
-	stock.ReservedQuantity -= quantity
-	r.inventory[productID] = stock
+	stock.AvailableQuantity += reservation.Quantity
+	stock.ReservedQuantity -= reservation.Quantity
+	r.inventory[reservation.ProductID] = stock
 
-	if reservedForOrder == quantity {
-		delete(productReservations, orderID)
+	if reservedForOrder == reservation.Quantity {
+		delete(productReservations, reservation.OrderID)
 	} else {
-		productReservations[orderID] = reservedForOrder - quantity
+		productReservations[reservation.OrderID] = reservedForOrder - reservation.Quantity
 	}
 
 	if len(productReservations) == 0 {
-		delete(r.reservations, productID)
+		delete(r.reservations, reservation.ProductID)
 	}
 
 	return cloneStock(stock), nil

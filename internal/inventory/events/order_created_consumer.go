@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/inventory/service"
 	sharedevents "github.com/vladfc/event-driven-ecommerce-app/internal/shared/events"
 )
@@ -144,7 +145,11 @@ func (c *OrderCreatedConsumer) reserveAll(ctx context.Context, event sharedevent
 	reservedItems := make([]sharedevents.InventoryReservationItem, 0, len(event.Items))
 
 	for _, item := range event.Items {
-		_, err := c.service.ReserveStock(ctx, item.ProductID, int64(item.Quantity), event.OrderID)
+		_, err := c.service.ReserveStock(ctx, domain.StockReservation{
+			ProductID: item.ProductID,
+			OrderID:   event.OrderID,
+			Quantity:  int64(item.Quantity),
+		})
 		if err != nil {
 			failedItem := &sharedevents.InventoryReservationItem{
 				ProductID: item.ProductID,
@@ -170,7 +175,11 @@ func (c *OrderCreatedConsumer) reserveAll(ctx context.Context, event sharedevent
 func (c *OrderCreatedConsumer) releaseReserved(ctx context.Context, orderID string, reservedItems []sharedevents.InventoryReservationItem) error {
 	for i := len(reservedItems) - 1; i >= 0; i-- {
 		item := reservedItems[i]
-		if _, err := c.service.ReleaseStock(ctx, item.ProductID, item.Quantity, orderID); err != nil {
+		if _, err := c.service.ReleaseStock(ctx, domain.StockReservation{
+			ProductID: item.ProductID,
+			OrderID:   orderID,
+			Quantity:  item.Quantity,
+		}); err != nil {
 			return fmt.Errorf("rollback reservation for product %s: %w", item.ProductID, err)
 		}
 	}

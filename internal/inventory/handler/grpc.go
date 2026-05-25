@@ -38,7 +38,13 @@ func (h *GRPCHandler) GetStockByProductID(ctx context.Context, req *inventoryv1.
 }
 
 func (h *GRPCHandler) ReserveStock(ctx context.Context, req *inventoryv1.ReserveStockRequest) (*inventoryv1.ReserveStockResponse, error) {
-	stock, err := h.service.ReserveStock(ctx, req.GetProductId(), req.GetQuantity(), req.GetOrderId())
+	reservation := domain.StockReservation{
+		ProductID: req.GetProductId(),
+		OrderID:   req.GetOrderId(),
+		Quantity:  req.GetQuantity(),
+	}
+
+	stock, err := h.service.ReserveStock(ctx, reservation)
 	if err != nil {
 		return nil, mapInventoryError(err)
 	}
@@ -58,7 +64,13 @@ func (h *GRPCHandler) ReserveStock(ctx context.Context, req *inventoryv1.Reserve
 }
 
 func (h *GRPCHandler) ReleaseStock(ctx context.Context, req *inventoryv1.ReleaseStockRequest) (*inventoryv1.ReleaseStockResponse, error) {
-	stock, err := h.service.ReleaseStock(ctx, req.GetProductId(), req.GetQuantity(), req.GetOrderId())
+	reservation := domain.StockReservation{
+		ProductID: req.GetProductId(),
+		OrderID:   req.GetOrderId(),
+		Quantity:  req.GetQuantity(),
+	}
+
+	stock, err := h.service.ReleaseStock(ctx, reservation)
 	if err != nil {
 		return nil, mapInventoryError(err)
 	}
