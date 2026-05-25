@@ -25,7 +25,7 @@ REDIS_ADDR ?= localhost:6379
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
-	run-catalog run-inventory run-inventory-kafka run-payment run-order run-order-kafka run-gateway run-services \
+	run-catalog run-inventory run-inventory-kafka run-payment run-payment-kafka run-order run-order-kafka run-gateway run-services \
 	kafka-up kafka-down kafka-logs
 
 help: ## Show available targets
@@ -121,6 +121,9 @@ run-inventory-kafka: ## Run inventory-service against the local Redpanda broker 
 run-payment: ## Run payment-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
+run-payment-kafka: ## Run payment-service against the local Redpanda broker and Redis
+	KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
+
 run-order: ## Run order-service (requires KAFKA_BROKERS)
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
@@ -144,7 +147,7 @@ run-services: ## Print the recommended local startup order
 	@echo "  make kafka-up"
 	@echo "  make run-catalog"
 	@echo "  make run-inventory-kafka"
-	@echo "  make run-payment"
+	@echo "  make run-payment-kafka"
 	@echo "  make run-order-kafka"
 	@echo "  make run-gateway"
 
