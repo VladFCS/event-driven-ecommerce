@@ -38,3 +38,18 @@ type OrderItem struct {
 	TotalPriceCurrency    string `json:"total_price_currency"`
 	TotalPriceAmountCents int64  `json:"total_price_amount_cents"`
 }
+
+type OrderOutboxEvent struct {
+	ID            string             `json:"id"`
+	AggregateType string             `json:"aggregate_type"`
+	AggregateID   string             `json:"aggregate_id"`
+	EventType     string             `json:"event_type"`
+	Topic         string             `json:"topic"`
+	EventKey      string             `json:"event_key"`
+	Payload       []byte             `json:"payload"`
+	AttemptCount  int32              `json:"attempt_count"`
+	LastError     string             `json:"last_error"`
+	LockedAt      pgtype.Timestamptz `json:"locked_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	PublishedAt   pgtype.Timestamptz `json:"published_at"`
+}

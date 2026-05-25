@@ -88,3 +88,53 @@ RETURNING *;
 -- name: DeleteOrderItemsByOrderID :exec
 DELETE FROM order_items
 WHERE order_id = $1;
+
+-- name: CreateOrderOutboxEvent :exec
+INSERT INTO order_outbox_events (
+    id,
+    aggregate_type,
+    aggregate_id,
+    event_type,
+    topic,
+    event_key,
+    payload,
+    attempt_count,
+    last_error,
+    locked_at,
+    created_at,
+    published_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+);
+
+-- name: ClaimPendingOrderOutboxEvents :many
+WITH pending AS (
+    SELECT id
+    FROM order_outbox_events AS pending_events
+    WHERE pending_events.published_at IS NULL
+      AND (pending_events.locked_at IS NULL OR pending_events.locked_at < $2)
+    ORDER BY pending_events.created_at ASC
+    LIMIT $1
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE order_outbox_events AS o
+SET locked_at = $3
+FROM pending
+WHERE o.id = pending.id
+RETURNING o.*;
+
+-- name: MarkOrderOutboxEventPublished :exec
+UPDATE order_outbox_events
+SET
+    published_at = $2,
+    locked_at = NULL,
+    last_error = ''
+WHERE id = $1;
+
+-- name: ReleaseOrderOutboxEvent :exec
+UPDATE order_outbox_events
+SET
+    locked_at = NULL,
+    attempt_count = attempt_count + 1,
+    last_error = $2
+WHERE id = $1;

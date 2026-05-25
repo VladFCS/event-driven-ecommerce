@@ -11,6 +11,62 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimPendingOrderOutboxEvents = `-- name: ClaimPendingOrderOutboxEvents :many
+WITH pending AS (
+    SELECT id
+    FROM order_outbox_events AS pending_events
+    WHERE pending_events.published_at IS NULL
+      AND (pending_events.locked_at IS NULL OR pending_events.locked_at < $2)
+    ORDER BY pending_events.created_at ASC
+    LIMIT $1
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE order_outbox_events AS o
+SET locked_at = $3
+FROM pending
+WHERE o.id = pending.id
+RETURNING o.id, o.aggregate_type, o.aggregate_id, o.event_type, o.topic, o.event_key, o.payload, o.attempt_count, o.last_error, o.locked_at, o.created_at, o.published_at
+`
+
+type ClaimPendingOrderOutboxEventsParams struct {
+	Limit      int32              `json:"limit"`
+	LockedAt   pgtype.Timestamptz `json:"locked_at"`
+	LockedAt_2 pgtype.Timestamptz `json:"locked_at_2"`
+}
+
+func (q *Queries) ClaimPendingOrderOutboxEvents(ctx context.Context, arg ClaimPendingOrderOutboxEventsParams) ([]OrderOutboxEvent, error) {
+	rows, err := q.db.Query(ctx, claimPendingOrderOutboxEvents, arg.Limit, arg.LockedAt, arg.LockedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OrderOutboxEvent{}
+	for rows.Next() {
+		var i OrderOutboxEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.AggregateType,
+			&i.AggregateID,
+			&i.EventType,
+			&i.Topic,
+			&i.EventKey,
+			&i.Payload,
+			&i.AttemptCount,
+			&i.LastError,
+			&i.LockedAt,
+			&i.CreatedAt,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countOrdersByCustomer = `-- name: CountOrdersByCustomer :one
 SELECT COUNT(*)
 FROM orders
@@ -146,6 +202,58 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.UnitPriceAmountCents,
 		arg.TotalPriceCurrency,
 		arg.TotalPriceAmountCents,
+	)
+	return err
+}
+
+const createOrderOutboxEvent = `-- name: CreateOrderOutboxEvent :exec
+INSERT INTO order_outbox_events (
+    id,
+    aggregate_type,
+    aggregate_id,
+    event_type,
+    topic,
+    event_key,
+    payload,
+    attempt_count,
+    last_error,
+    locked_at,
+    created_at,
+    published_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+)
+`
+
+type CreateOrderOutboxEventParams struct {
+	ID            string             `json:"id"`
+	AggregateType string             `json:"aggregate_type"`
+	AggregateID   string             `json:"aggregate_id"`
+	EventType     string             `json:"event_type"`
+	Topic         string             `json:"topic"`
+	EventKey      string             `json:"event_key"`
+	Payload       []byte             `json:"payload"`
+	AttemptCount  int32              `json:"attempt_count"`
+	LastError     string             `json:"last_error"`
+	LockedAt      pgtype.Timestamptz `json:"locked_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	PublishedAt   pgtype.Timestamptz `json:"published_at"`
+}
+
+func (q *Queries) CreateOrderOutboxEvent(ctx context.Context, arg CreateOrderOutboxEventParams) error {
+	_, err := q.db.Exec(ctx, createOrderOutboxEvent,
+		arg.ID,
+		arg.AggregateType,
+		arg.AggregateID,
+		arg.EventType,
+		arg.Topic,
+		arg.EventKey,
+		arg.Payload,
+		arg.AttemptCount,
+		arg.LastError,
+		arg.LockedAt,
+		arg.CreatedAt,
+		arg.PublishedAt,
 	)
 	return err
 }
@@ -313,6 +421,44 @@ func (q *Queries) ListOrdersByCustomer(ctx context.Context, arg ListOrdersByCust
 		return nil, err
 	}
 	return items, nil
+}
+
+const markOrderOutboxEventPublished = `-- name: MarkOrderOutboxEventPublished :exec
+UPDATE order_outbox_events
+SET
+    published_at = $2,
+    locked_at = NULL,
+    last_error = ''
+WHERE id = $1
+`
+
+type MarkOrderOutboxEventPublishedParams struct {
+	ID          string             `json:"id"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
+func (q *Queries) MarkOrderOutboxEventPublished(ctx context.Context, arg MarkOrderOutboxEventPublishedParams) error {
+	_, err := q.db.Exec(ctx, markOrderOutboxEventPublished, arg.ID, arg.PublishedAt)
+	return err
+}
+
+const releaseOrderOutboxEvent = `-- name: ReleaseOrderOutboxEvent :exec
+UPDATE order_outbox_events
+SET
+    locked_at = NULL,
+    attempt_count = attempt_count + 1,
+    last_error = $2
+WHERE id = $1
+`
+
+type ReleaseOrderOutboxEventParams struct {
+	ID        string `json:"id"`
+	LastError string `json:"last_error"`
+}
+
+func (q *Queries) ReleaseOrderOutboxEvent(ctx context.Context, arg ReleaseOrderOutboxEventParams) error {
+	_, err := q.db.Exec(ctx, releaseOrderOutboxEvent, arg.ID, arg.LastError)
+	return err
 }
 
 const updateOrder = `-- name: UpdateOrder :one

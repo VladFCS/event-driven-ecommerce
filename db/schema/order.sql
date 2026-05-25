@@ -30,8 +30,26 @@ CREATE TABLE order_items (
     PRIMARY KEY (order_id, item_position)
 );
 
+CREATE TABLE order_outbox_events (
+    id TEXT PRIMARY KEY,
+    aggregate_type TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    event_key TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    attempt_count INT NOT NULL DEFAULT 0,
+    last_error TEXT NOT NULL DEFAULT '',
+    locked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL,
+    published_at TIMESTAMPTZ
+);
+
 CREATE INDEX orders_customer_id_created_at_idx
     ON orders (customer_id, created_at);
 
 CREATE INDEX order_items_product_id_idx
     ON order_items (product_id);
+
+CREATE INDEX order_outbox_events_pending_idx
+    ON order_outbox_events (published_at, locked_at, created_at);
