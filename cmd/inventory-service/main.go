@@ -86,6 +86,17 @@ func main() {
 		}
 	}()
 
+	cancelledConsumer, closeCancelledConsumer, err := newOrderCancelledConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure order.cancelled consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeCancelledConsumer(); err != nil {
+			log.Error("failed to close order.cancelled consumer", slog.Any("error", err))
+		}
+	}()
+
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcmiddleware.RequestIDUnaryServerInterceptor()),
 	)
@@ -108,6 +119,14 @@ func main() {
 		log.Info("starting order.created consumer")
 		if runErr := consumer.Run(ctx); runErr != nil && ctx.Err() == nil {
 			log.Error("order.created consumer stopped with error", slog.Any("error", runErr))
+			stop()
+		}
+	}()
+
+	go func() {
+		log.Info("starting order.cancelled consumer")
+		if runErr := cancelledConsumer.Run(ctx); runErr != nil && ctx.Err() == nil {
+			log.Error("order.cancelled consumer stopped with error", slog.Any("error", runErr))
 			stop()
 		}
 	}()
@@ -188,6 +207,29 @@ func newOrderCreatedConsumer(
 	}
 
 	consumer := events.NewOrderCreatedConsumer(brokers, topic, groupID, service, deduplicator, publisher, logger)
+	return consumer, consumer.Close, nil
+}
+
+func newOrderCancelledConsumer(
+	service *service.InventoryService,
+	deduplicator events.EventDeduplicator,
+	logger *slog.Logger,
+) (*events.OrderCancelledConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_ORDER_CANCELLED_TOPIC", "order.cancelled"))
+	groupID := strings.TrimSpace(getenv("KAFKA_INVENTORY_CONSUMER_GROUP", "inventory-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CANCELLED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_CONSUMER_GROUP is required")
+	}
+
+	consumer := events.NewOrderCancelledConsumer(brokers, topic, groupID, service, deduplicator, logger)
 	return consumer, consumer.Close, nil
 }
 
