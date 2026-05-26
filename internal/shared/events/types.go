@@ -4,6 +4,7 @@ import "encoding/json"
 
 const (
 	OrderCreatedEventType               = "order.created"
+	OrderCancelledEventType             = "order.cancelled"
 	InventoryReservedEventType          = "inventory.reserved"
 	InventoryReservationFailedEventType = "inventory.reservation_failed"
 	PaymentCreatedEventType             = "payment.created"
@@ -44,6 +45,12 @@ type OrderCreated struct {
 	ShippingAddress Address            `json:"shipping_address"`
 	Payment         PaymentDetails     `json:"payment"`
 	Items           []OrderCreatedItem `json:"items"`
+}
+
+type OrderCancelled struct {
+	OrderID      string `json:"order_id"`
+	CustomerID   string `json:"customer_id"`
+	CancelReason string `json:"cancel_reason"`
 }
 
 type OrderCreatedItem struct {
