@@ -36,9 +36,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	topic := strings.TrimSpace(getenv("KAFKA_ORDER_CREATED_TOPIC", "orders.created"))
-	if topic == "" {
+	orderCreatedTopic := strings.TrimSpace(getenv("KAFKA_ORDER_CREATED_TOPIC", "orders.created"))
+	if orderCreatedTopic == "" {
 		log.Error("failed to configure order event publisher", slog.Any("error", errors.New("KAFKA_ORDER_CREATED_TOPIC is required")))
+		os.Exit(1)
+	}
+	orderCancelledTopic := strings.TrimSpace(getenv("KAFKA_ORDER_CANCELLED_TOPIC", "order.cancelled"))
+	if orderCancelledTopic == "" {
+		log.Error("failed to configure order event publisher", slog.Any("error", errors.New("KAFKA_ORDER_CANCELLED_TOPIC is required")))
 		os.Exit(1)
 	}
 
@@ -49,7 +54,7 @@ func main() {
 	}
 	defer closePool()
 
-	orderRepository := repository.NewPostgresRepository(pool, topic)
+	orderRepository := repository.NewPostgresRepository(pool, orderCreatedTopic, orderCancelledTopic)
 
 	publisher, closePublisher, err := newOrderEventPublisher(log)
 	if err != nil {

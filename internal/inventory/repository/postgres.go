@@ -184,6 +184,69 @@ func (r *PostgresRepository) ReleaseStock(ctx context.Context, reservation domai
 	return mapDBStock(row)
 }
 
+func (r *PostgresRepository) ReleaseReservationsByOrderID(ctx context.Context, orderID string) error {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return domain.ErrInvalidStock
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin release reservations by order transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	qtx := r.queries.WithTx(tx)
+	reservations, err := qtx.ListReservationsByOrderID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("list reservations by order id in postgres: %w", err)
+	}
+
+	if len(reservations) == 0 {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit empty release reservations by order transaction: %w", err)
+		}
+		return nil
+	}
+
+	nowTz := pgtype.Timestamptz{
+		Time:  time.Now().UTC(),
+		Valid: true,
+	}
+
+	for _, reservation := range reservations {
+		if _, err := qtx.GetStockByProductIDForUpdate(ctx, reservation.ProductID); err != nil {
+			if err == pgx.ErrNoRows {
+				return domain.ErrStockNotFound
+			}
+			return fmt.Errorf("get stock by id from postgres for order release: %w", err)
+		}
+
+		if _, err := qtx.ReleaseInventoryStock(ctx, inventorydb.ReleaseInventoryStockParams{
+			ProductID:         reservation.ProductID,
+			AvailableQuantity: reservation.Quantity,
+			UpdatedAt:         nowTz,
+		}); err != nil {
+			return fmt.Errorf("release reserved stock in postgres: %w", err)
+		}
+
+		if err := qtx.DeleteInventoryReservation(ctx, inventorydb.DeleteInventoryReservationParams{
+			ProductID: reservation.ProductID,
+			OrderID:   reservation.OrderID,
+		}); err != nil {
+			return fmt.Errorf("delete reservation by order id in postgres: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit release reservations by order transaction: %w", err)
+	}
+
+	return nil
+}
+
 func validateStockReservation(reservation domain.StockReservation) error {
 	if strings.TrimSpace(reservation.OrderID) == "" ||
 		strings.TrimSpace(reservation.ProductID) == "" ||
