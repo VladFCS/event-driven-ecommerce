@@ -105,6 +105,7 @@ func toGetOrderByIDResponse(result *gatewayservice.GetOrderByIDResult) *GetOrder
 		Items:           make([]OrderItemResponse, 0, len(result.Items)),
 		TotalAmount:     MoneyResponse(result.TotalAmount),
 		ShippingAddress: AddressResponse(result.ShippingAddress),
+		CancelReason:    result.CancelReason,
 		CreatedAt:       result.CreatedAt,
 		UpdatedAt:       result.UpdatedAt,
 	}
@@ -125,10 +126,11 @@ func toGetOrderByIDResponse(result *gatewayservice.GetOrderByIDResult) *GetOrder
 
 func toCancelOrderResponse(result *gatewayservice.CancelOrderResult) *CancelOrderResponse {
 	return &CancelOrderResponse{
-		OrderID:     result.OrderID,
-		CustomerID:  result.CustomerID,
-		OrderStatus: result.OrderStatus,
-		UpdatedAt:   result.UpdatedAt,
+		OrderID:      result.OrderID,
+		CustomerID:   result.CustomerID,
+		OrderStatus:  result.OrderStatus,
+		CancelReason: result.CancelReason,
+		UpdatedAt:    result.UpdatedAt,
 	}
 }
 

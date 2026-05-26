@@ -52,10 +52,11 @@ type CancelOrderInput struct {
 }
 
 type CancelOrderResult struct {
-	OrderID     string
-	CustomerID  string
-	OrderStatus string
-	UpdatedAt   string
+	OrderID      string
+	CustomerID   string
+	OrderStatus  string
+	CancelReason string
+	UpdatedAt    string
 }
 
 type GetOrderByIDResult struct {
@@ -65,6 +66,7 @@ type GetOrderByIDResult struct {
 	Items           []CheckoutItem
 	TotalAmount     Money
 	ShippingAddress Address
+	CancelReason    string
 	CreatedAt       string
 	UpdatedAt       string
 }

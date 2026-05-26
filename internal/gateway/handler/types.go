@@ -59,15 +59,17 @@ type GetOrderByIDResponse struct {
 	Items           []OrderItemResponse `json:"items"`
 	TotalAmount     MoneyResponse       `json:"total_amount"`
 	ShippingAddress AddressResponse     `json:"shipping_address"`
+	CancelReason    string              `json:"cancel_reason,omitempty"`
 	CreatedAt       string              `json:"created_at"`
 	UpdatedAt       string              `json:"updated_at"`
 }
 
 type CancelOrderResponse struct {
-	OrderID     string `json:"order_id"`
-	CustomerID  string `json:"customer_id"`
-	OrderStatus string `json:"order_status"`
-	UpdatedAt   string `json:"updated_at"`
+	OrderID      string `json:"order_id"`
+	CustomerID   string `json:"customer_id"`
+	OrderStatus  string `json:"order_status"`
+	CancelReason string `json:"cancel_reason,omitempty"`
+	UpdatedAt    string `json:"updated_at"`
 }
 
 type ListOrdersByCustomerResponse struct {

@@ -110,10 +110,11 @@ func (s *GatewayService) performCancelOrder(ctx context.Context, orderID, reason
 	}
 
 	return &CancelOrderResult{
-		OrderID:     resp.Order.ID,
-		CustomerID:  resp.Order.CustomerID,
-		OrderStatus: resp.Order.Status,
-		UpdatedAt:   resp.Order.UpdatedAt,
+		OrderID:      resp.Order.ID,
+		CustomerID:   resp.Order.CustomerID,
+		OrderStatus:  resp.Order.Status,
+		CancelReason: resp.Order.CancelReason,
+		UpdatedAt:    resp.Order.UpdatedAt,
 	}, nil
 }
 
@@ -152,6 +153,7 @@ func mapClientOrderToResult(order orderclient.Order) GetOrderByIDResult {
 		Items:           make([]CheckoutItem, 0, len(order.Items)),
 		TotalAmount:     mapOrderMoney(order.TotalAmount),
 		ShippingAddress: mapOrderAddress(order.ShippingAddress),
+		CancelReason:    order.CancelReason,
 		CreatedAt:       order.CreatedAt,
 		UpdatedAt:       order.UpdatedAt,
 	}

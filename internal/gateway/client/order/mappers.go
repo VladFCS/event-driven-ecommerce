@@ -72,6 +72,7 @@ func mapProtoOrder(order *orderv1.Order) *Order {
 		Status:          order.GetStatus().String(),
 		ShippingAddress: mapProtoAddress(order.GetShippingAddress()),
 		Payment:         mapProtoPaymentDetails(order.GetPayment()),
+		CancelReason:    order.GetCancelReason(),
 		CreatedAt:       order.GetCreatedAt(),
 		UpdatedAt:       order.GetUpdatedAt(),
 	}

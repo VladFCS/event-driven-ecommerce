@@ -44,6 +44,7 @@ type Order struct {
 	Status          string
 	ShippingAddress Address
 	Payment         PaymentDetails
+	CancelReason    string
 	CreatedAt       string
 	UpdatedAt       string
 }
