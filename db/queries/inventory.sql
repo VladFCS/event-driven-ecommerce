@@ -55,6 +55,12 @@ WHERE product_id = $1
   AND order_id = $2
 FOR UPDATE;
 
+-- name: ListReservationsByOrderID :many
+SELECT *
+FROM inventory_reservations
+WHERE order_id = $1
+ORDER BY product_id ASC;
+
 -- name: UpsertInventoryReservation :exec
 INSERT INTO inventory_reservations (
     product_id,

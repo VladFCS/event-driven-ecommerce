@@ -41,6 +41,14 @@ func (s *InventoryService) ReleaseStock(ctx context.Context, reservation domain.
 	return s.repository.ReleaseStock(ctx, reservation)
 }
 
+func (s *InventoryService) ReleaseReservationsByOrderID(ctx context.Context, orderID string) error {
+	if strings.TrimSpace(orderID) == "" {
+		return domain.ErrInvalidStock
+	}
+
+	return s.repository.ReleaseReservationsByOrderID(ctx, orderID)
+}
+
 func validateReservationRequest(reservation domain.StockReservation) error {
 	if strings.TrimSpace(reservation.ProductID) == "" || strings.TrimSpace(reservation.OrderID) == "" || reservation.Quantity <= 0 {
 		return domain.ErrInvalidStock

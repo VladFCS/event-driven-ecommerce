@@ -163,6 +163,39 @@ func (q *Queries) GetStockByProductIDForUpdate(ctx context.Context, productID st
 	return i, err
 }
 
+const listReservationsByOrderID = `-- name: ListReservationsByOrderID :many
+SELECT product_id, order_id, quantity, created_at, updated_at
+FROM inventory_reservations
+WHERE order_id = $1
+ORDER BY product_id ASC
+`
+
+func (q *Queries) ListReservationsByOrderID(ctx context.Context, orderID string) ([]InventoryReservation, error) {
+	rows, err := q.db.Query(ctx, listReservationsByOrderID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []InventoryReservation{}
+	for rows.Next() {
+		var i InventoryReservation
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.OrderID,
+			&i.Quantity,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const releaseInventoryStock = `-- name: ReleaseInventoryStock :one
 UPDATE inventory_stocks
 SET

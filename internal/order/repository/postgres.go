@@ -17,16 +17,18 @@ import (
 )
 
 type PostgresRepository struct {
-	pool              *pgxpool.Pool
-	queries           *orderdb.Queries
-	orderCreatedTopic string
+	pool                *pgxpool.Pool
+	queries             *orderdb.Queries
+	orderCreatedTopic   string
+	orderCancelledTopic string
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool, orderCreatedTopic string) *PostgresRepository {
+func NewPostgresRepository(pool *pgxpool.Pool, orderCreatedTopic string, orderCancelledTopic string) *PostgresRepository {
 	return &PostgresRepository{
-		pool:              pool,
-		queries:           orderdb.New(pool),
-		orderCreatedTopic: strings.TrimSpace(orderCreatedTopic),
+		pool:                pool,
+		queries:             orderdb.New(pool),
+		orderCreatedTopic:   strings.TrimSpace(orderCreatedTopic),
+		orderCancelledTopic: strings.TrimSpace(orderCancelledTopic),
 	}
 }
 
@@ -186,6 +188,14 @@ func (r *PostgresRepository) UpdateOrder(ctx context.Context, order domain.Order
 
 	qtx := r.queries.WithTx(tx)
 
+	existingRow, err := qtx.GetOrderByID(ctx, order.ID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Order{}, domain.ErrOrderNotFound
+		}
+		return domain.Order{}, fmt.Errorf("get current order by id from postgres: %w", err)
+	}
+
 	row, err := qtx.UpdateOrder(ctx, toUpdateOrderParams(order))
 	if err != nil {
 		return domain.Order{}, mapUpdateOrderError(err)
@@ -207,6 +217,12 @@ func (r *PostgresRepository) UpdateOrder(ctx context.Context, order domain.Order
 	mapped, err := mapDBOrder(row, items)
 	if err != nil {
 		return domain.Order{}, fmt.Errorf("map updated order from postgres: %w", err)
+	}
+
+	if existingRow.Status != row.Status && row.Status == orderv1.OrderStatus_ORDER_STATUS_CANCELLED.String() {
+		if err := insertOrderCancelledOutboxEvent(ctx, qtx, mapped, r.orderCancelledTopic); err != nil {
+			return domain.Order{}, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -283,6 +299,39 @@ func insertOrderCreatedOutboxEvent(ctx context.Context, q *orderdb.Queries, orde
 		PublishedAt: pgtype.Timestamptz{},
 	}); err != nil {
 		return fmt.Errorf("create order outbox event in postgres: %w", err)
+	}
+
+	return nil
+}
+
+func insertOrderCancelledOutboxEvent(ctx context.Context, q *orderdb.Queries, order domain.Order, topic string) error {
+	if strings.TrimSpace(topic) == "" {
+		return fmt.Errorf("create order cancelled outbox event in postgres: topic is required")
+	}
+
+	message, err := events.NewOrderCancelledOutboxMessage(order, topic)
+	if err != nil {
+		return fmt.Errorf("create order cancelled outbox event in postgres: %w", err)
+	}
+
+	if err := q.CreateOrderOutboxEvent(ctx, orderdb.CreateOrderOutboxEventParams{
+		ID:            message.ID,
+		AggregateType: message.AggregateType,
+		AggregateID:   message.AggregateID,
+		EventType:     message.EventType,
+		Topic:         message.Topic,
+		EventKey:      message.Key,
+		Payload:       message.Payload,
+		AttemptCount:  0,
+		LastError:     "",
+		LockedAt:      pgtype.Timestamptz{},
+		CreatedAt: pgtype.Timestamptz{
+			Time:  message.CreatedAt,
+			Valid: true,
+		},
+		PublishedAt: pgtype.Timestamptz{},
+	}); err != nil {
+		return fmt.Errorf("create order cancelled outbox event in postgres: %w", err)
 	}
 
 	return nil
