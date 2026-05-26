@@ -10,14 +10,14 @@ import (
 )
 
 type OutboxMessage struct {
-	ID           string
+	ID            string
 	AggregateType string
-	AggregateID  string
-	EventType    string
-	Topic        string
-	Key          string
-	Payload      []byte
-	CreatedAt    time.Time
+	AggregateID   string
+	EventType     string
+	Topic         string
+	Key           string
+	Payload       []byte
+	CreatedAt     time.Time
 }
 
 func NewOrderCreatedOutboxMessage(order domain.Order, topic string) (OutboxMessage, error) {
@@ -82,6 +82,41 @@ func NewOrderCreatedOutboxMessage(order domain.Order, topic string) (OutboxMessa
 		AggregateType: "order",
 		AggregateID:   order.ID,
 		EventType:     sharedevents.OrderCreatedEventType,
+		Topic:         topic,
+		Key:           order.ID,
+		Payload:       envelopeBytes,
+		CreatedAt:     createdAt,
+	}, nil
+}
+
+func NewOrderCancelledOutboxMessage(order domain.Order, topic string) (OutboxMessage, error) {
+	event := sharedevents.OrderCancelled{
+		OrderID:      order.ID,
+		CustomerID:   order.CustomerID,
+		CancelReason: order.CancelReason,
+	}
+
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return OutboxMessage{}, fmt.Errorf("marshal order.cancelled payload: %w", err)
+	}
+
+	createdAt := time.Now().UTC()
+	envelopeBytes, err := json.Marshal(sharedevents.Envelope{
+		EventID:    fmt.Sprintf("evt-%d", createdAt.UnixNano()),
+		EventType:  sharedevents.OrderCancelledEventType,
+		OccurredAt: createdAt.Format(time.RFC3339),
+		Payload:    payload,
+	})
+	if err != nil {
+		return OutboxMessage{}, fmt.Errorf("marshal order.cancelled envelope: %w", err)
+	}
+
+	return OutboxMessage{
+		ID:            fmt.Sprintf("outbox-cancelled-%s", order.ID),
+		AggregateType: "order",
+		AggregateID:   order.ID,
+		EventType:     sharedevents.OrderCancelledEventType,
 		Topic:         topic,
 		Key:           order.ID,
 		Payload:       envelopeBytes,
