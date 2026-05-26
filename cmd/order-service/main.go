@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	orderv1 "github.com/vladfc/event-driven-ecommerce-app/gen/order/v1"
+	"github.com/vladfc/event-driven-ecommerce-app/internal/order/consumers"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/order/repository"
@@ -60,6 +62,17 @@ func main() {
 		}
 	}()
 
+	deduplicator, closeDeduplicator, err := newOrderEventDeduplicator(log)
+	if err != nil {
+		log.Error("failed to configure order event deduplicator", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeDeduplicator(); err != nil {
+			log.Error("failed to close order event deduplicator", slog.Any("error", err))
+		}
+	}()
+
 	outboxConfig, err := newOutboxDispatcherConfig()
 	if err != nil {
 		log.Error("failed to configure order outbox dispatcher", slog.Any("error", err))
@@ -76,6 +89,50 @@ func main() {
 	service := service.NewOrderService(orderRepository)
 	grpcHandler := handler.NewGRPCHandler(service, log)
 
+	inventoryReservedConsumer, closeInventoryReservedConsumer, err := newInventoryReservedConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure inventory.reserved consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeInventoryReservedConsumer(); err != nil {
+			log.Error("failed to close inventory.reserved consumer", slog.Any("error", err))
+		}
+	}()
+
+	inventoryReservationFailedConsumer, closeInventoryReservationFailedConsumer, err := newInventoryReservationFailedConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure inventory.reservation_failed consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closeInventoryReservationFailedConsumer(); err != nil {
+			log.Error("failed to close inventory.reservation_failed consumer", slog.Any("error", err))
+		}
+	}()
+
+	paymentCreatedConsumer, closePaymentCreatedConsumer, err := newPaymentCreatedConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure payment.created consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closePaymentCreatedConsumer(); err != nil {
+			log.Error("failed to close payment.created consumer", slog.Any("error", err))
+		}
+	}()
+
+	paymentCreationFailedConsumer, closePaymentCreationFailedConsumer, err := newPaymentCreationFailedConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure payment.creation_failed consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closePaymentCreationFailedConsumer(); err != nil {
+			log.Error("failed to close payment.creation_failed consumer", slog.Any("error", err))
+		}
+	}()
+
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcmiddleware.RequestIDUnaryServerInterceptor()),
 	)
@@ -89,6 +146,7 @@ func main() {
 	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log, outboxConfig)
 	serverErrCh := make(chan error, 1)
 	workerErrCh := make(chan error, 1)
+	consumerErrCh := make(chan error, 4)
 
 	go func() {
 		if err := outboxDispatcher.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -107,6 +165,20 @@ func main() {
 		}
 	}()
 
+	startConsumer := func(name string, consumer *consumers.TopicConsumer) {
+		go func() {
+			log.Info("starting consumer", slog.String("consumer", name))
+			if runErr := consumer.Run(ctx); runErr != nil && ctx.Err() == nil {
+				consumerErrCh <- fmt.Errorf("%s consumer: %w", name, runErr)
+			}
+		}()
+	}
+
+	startConsumer("inventory.reserved", inventoryReservedConsumer)
+	startConsumer("inventory.reservation_failed", inventoryReservationFailedConsumer)
+	startConsumer("payment.created", paymentCreatedConsumer)
+	startConsumer("payment.creation_failed", paymentCreationFailedConsumer)
+
 	select {
 	case <-ctx.Done():
 		log.Info("shutdown signal received")
@@ -115,6 +187,9 @@ func main() {
 		stop()
 	case err := <-workerErrCh:
 		log.Error("outbox dispatcher stopped with error", slog.Any("error", err))
+		stop()
+	case err := <-consumerErrCh:
+		log.Error("order event consumer stopped with error", slog.Any("error", err))
 		stop()
 	}
 
@@ -180,6 +255,50 @@ func newOrderEventPublisher(logger *slog.Logger) (events.Publisher, func() error
 	return publisher, publisher.Close, nil
 }
 
+func newOrderEventDeduplicator(logger *slog.Logger) (consumers.EventDeduplicator, func() error, error) {
+	addr := strings.TrimSpace(getenv("REDIS_ADDR", "localhost:6379"))
+	password := getenv("REDIS_PASSWORD", "")
+	rawDB := strings.TrimSpace(getenv("REDIS_DB", "0"))
+	rawTTL := strings.TrimSpace(getenv("REDIS_EVENT_DEDUP_TTL", "24h"))
+
+	if addr == "" {
+		return nil, nil, errors.New("REDIS_ADDR is required")
+	}
+
+	db, err := strconv.Atoi(rawDB)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse REDIS_DB: %w", err)
+	}
+
+	ttl, err := time.ParseDuration(rawTTL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse REDIS_EVENT_DEDUP_TTL: %w", err)
+	}
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+	})
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		_ = client.Close()
+		return nil, nil, fmt.Errorf("ping redis: %w", err)
+	}
+
+	logger.Info(
+		"configured redis order event deduplicator",
+		slog.String("addr", addr),
+		slog.Int("db", db),
+		slog.String("ttl", ttl.String()),
+	)
+
+	return consumers.NewRedisEventDeduplicator(client, ttl), client.Close, nil
+}
+
 func parseKafkaBrokers(raw string) []string {
 	parts := strings.Split(raw, ",")
 	brokers := make([]string, 0, len(parts))
@@ -190,6 +309,98 @@ func parseKafkaBrokers(raw string) []string {
 		}
 	}
 	return brokers
+}
+
+func newInventoryReservedConsumer(
+	service *service.OrderService,
+	deduplicator consumers.EventDeduplicator,
+	logger *slog.Logger,
+) (*consumers.TopicConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_INVENTORY_RESERVED_TOPIC", "inventory.reserved"))
+	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_RESERVED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
+	}
+
+	consumer := consumers.NewInventoryReservedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	return consumer, consumer.Close, nil
+}
+
+func newInventoryReservationFailedConsumer(
+	service *service.OrderService,
+	deduplicator consumers.EventDeduplicator,
+	logger *slog.Logger,
+) (*consumers.TopicConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC", "inventory.reservation_failed"))
+	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
+	}
+
+	consumer := consumers.NewInventoryReservationFailedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	return consumer, consumer.Close, nil
+}
+
+func newPaymentCreatedConsumer(
+	service *service.OrderService,
+	deduplicator consumers.EventDeduplicator,
+	logger *slog.Logger,
+) (*consumers.TopicConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CREATED_TOPIC", "payment.created"))
+	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_PAYMENT_CREATED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
+	}
+
+	consumer := consumers.NewPaymentCreatedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	return consumer, consumer.Close, nil
+}
+
+func newPaymentCreationFailedConsumer(
+	service *service.OrderService,
+	deduplicator consumers.EventDeduplicator,
+	logger *slog.Logger,
+) (*consumers.TopicConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CREATION_FAILED_TOPIC", "payment.creation_failed"))
+	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_PAYMENT_CREATION_FAILED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
+	}
+
+	consumer := consumers.NewPaymentCreationFailedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	return consumer, consumer.Close, nil
 }
 
 func newOutboxDispatcherConfig() (events.OutboxDispatcherConfig, error) {

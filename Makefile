@@ -152,11 +152,11 @@ run-payment: ## Run payment-service
 run-payment-kafka: ## Run payment-service against the local Redpanda broker and Redis
 	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
-run-order: ## Run order-service (requires KAFKA_BROKERS)
-	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+run-order: ## Run order-service
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
-run-order-kafka: ## Run order-service against the local Redpanda broker
-	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+run-order-kafka: ## Run order-service against the local Redpanda broker and Redis
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-gateway: ## Run gateway-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(GATEWAY_CMD)
