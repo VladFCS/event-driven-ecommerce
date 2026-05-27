@@ -12,20 +12,31 @@ import (
 )
 
 type KafkaPublisher struct {
-	createdWriter *kafka.Writer
-	failedWriter  *kafka.Writer
-	logger        *slog.Logger
+	createdWriter  *kafka.Writer
+	failedWriter   *kafka.Writer
+	capturedWriter *kafka.Writer
+	paymentFailedWriter *kafka.Writer
+	logger         *slog.Logger
 }
 
-func NewKafkaPublisher(brokers []string, createdTopic, failedTopic string, logger *slog.Logger) *KafkaPublisher {
+func NewKafkaPublisher(
+	brokers []string,
+	createdTopic string,
+	failedTopic string,
+	capturedTopic string,
+	paymentFailedTopic string,
+	logger *slog.Logger,
+) *KafkaPublisher {
 	if logger == nil {
 		logger = slog.Default()
 	}
 
 	return &KafkaPublisher{
-		createdWriter: newWriter(brokers, createdTopic),
-		failedWriter:  newWriter(brokers, failedTopic),
-		logger:        logger,
+		createdWriter:       newWriter(brokers, createdTopic),
+		failedWriter:        newWriter(brokers, failedTopic),
+		capturedWriter:      newWriter(brokers, capturedTopic),
+		paymentFailedWriter: newWriter(brokers, paymentFailedTopic),
+		logger:              logger,
 	}
 }
 
@@ -35,6 +46,14 @@ func (p *KafkaPublisher) PublishPaymentCreated(ctx context.Context, sourceEventI
 
 func (p *KafkaPublisher) PublishPaymentCreationFailed(ctx context.Context, sourceEventID string, event sharedevents.PaymentCreationFailed) error {
 	return p.writeEvent(ctx, p.failedWriter, sharedevents.PaymentCreationFailedEventType, sourceEventID, event.OrderID, event)
+}
+
+func (p *KafkaPublisher) PublishPaymentCaptured(ctx context.Context, sourceEventID string, event sharedevents.PaymentCaptured) error {
+	return p.writeEvent(ctx, p.capturedWriter, sharedevents.PaymentCapturedEventType, sourceEventID, event.OrderID, event)
+}
+
+func (p *KafkaPublisher) PublishPaymentFailed(ctx context.Context, sourceEventID string, event sharedevents.PaymentFailed) error {
+	return p.writeEvent(ctx, p.paymentFailedWriter, sharedevents.PaymentFailedEventType, sourceEventID, event.OrderID, event)
 }
 
 func (p *KafkaPublisher) writeEvent(ctx context.Context, writer *kafka.Writer, eventType, sourceEventID, key string, payload any) error {
@@ -85,9 +104,18 @@ func (p *KafkaPublisher) Close() error {
 			return err
 		}
 	}
-
 	if p.failedWriter != nil {
 		if err := p.failedWriter.Close(); err != nil {
+			return err
+		}
+	}
+	if p.capturedWriter != nil {
+		if err := p.capturedWriter.Close(); err != nil {
+			return err
+		}
+	}
+	if p.paymentFailedWriter != nil {
+		if err := p.paymentFailedWriter.Close(); err != nil {
 			return err
 		}
 	}
