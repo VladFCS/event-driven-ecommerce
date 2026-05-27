@@ -36,13 +36,22 @@ POSTGRES_DB ?= ecommerce
 POSTGRES_USER ?= app
 POSTGRES_PASSWORD ?= app
 DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
+CATALOG_DATABASE_URL ?= $(DATABASE_URL)
+INVENTORY_DATABASE_URL ?= $(DATABASE_URL)
 PAYMENT_DATABASE_URL ?= $(DATABASE_URL)
 ORDER_DATABASE_URL ?= $(DATABASE_URL)
+KAFKA_INVENTORY_RESERVED_TOPIC ?= inventory.reserved
+KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC ?= inventory.reservation_failed
+KAFKA_PAYMENT_CREATED_TOPIC ?= payment.created
+KAFKA_PAYMENT_CREATION_FAILED_TOPIC ?= payment.creation_failed
+KAFKA_INVENTORY_CONSUMER_GROUP ?= inventory-service
+KAFKA_PAYMENT_CONSUMER_GROUP ?= payment-service
+KAFKA_ORDER_CONSUMER_GROUP ?= order-service
 
 .PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
 	run-catalog run-inventory run-inventory-kafka run-payment run-payment-kafka run-order run-order-kafka run-gateway run-services \
-	kafka-up kafka-down kafka-logs db-up db-down db-logs db-prepare db-migrate-up db-migrate-down db-migrate-version \
+	kafka-up kafka-down kafka-logs db-up db-down db-logs db-prepare db-migrate-up db-migrate-down db-migrate-version db-seed-demo \
 	migrate-install sqlc-install sqlc-generate sqlc-verify
 
 help: ## Show available targets
@@ -143,23 +152,23 @@ build-gateway: ## Build gateway-service binary
 run-catalog: ## Run catalog-service
 	CATALOG_DATABASE_URL=$(CATALOG_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(CATALOG_CMD)
 
-run-inventory: ## Run inventory-service
-	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
+run-inventory: ## Run inventory-service against the local Redpanda broker and Redis
+	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC=$(KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC) KAFKA_INVENTORY_CONSUMER_GROUP=$(KAFKA_INVENTORY_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
 
 run-inventory-kafka: ## Run inventory-service against the local Redpanda broker and Redis
-	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
+	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC=$(KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC) KAFKA_INVENTORY_CONSUMER_GROUP=$(KAFKA_INVENTORY_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
 
-run-payment: ## Run payment-service
-	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
+run-payment: ## Run payment-service against the local Redpanda broker and Redis
+	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_PAYMENT_CREATED_TOPIC=$(KAFKA_PAYMENT_CREATED_TOPIC) KAFKA_PAYMENT_CREATION_FAILED_TOPIC=$(KAFKA_PAYMENT_CREATION_FAILED_TOPIC) KAFKA_PAYMENT_CAPTURED_TOPIC=$(KAFKA_PAYMENT_CAPTURED_TOPIC) KAFKA_PAYMENT_FAILED_TOPIC=$(KAFKA_PAYMENT_FAILED_TOPIC) KAFKA_PAYMENT_CONSUMER_GROUP=$(KAFKA_PAYMENT_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
 run-payment-kafka: ## Run payment-service against the local Redpanda broker and Redis
-	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
+	PAYMENT_DATABASE_URL=$(PAYMENT_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_PAYMENT_CREATED_TOPIC=$(KAFKA_PAYMENT_CREATED_TOPIC) KAFKA_PAYMENT_CREATION_FAILED_TOPIC=$(KAFKA_PAYMENT_CREATION_FAILED_TOPIC) KAFKA_PAYMENT_CAPTURED_TOPIC=$(KAFKA_PAYMENT_CAPTURED_TOPIC) KAFKA_PAYMENT_FAILED_TOPIC=$(KAFKA_PAYMENT_FAILED_TOPIC) KAFKA_PAYMENT_CONSUMER_GROUP=$(KAFKA_PAYMENT_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(PAYMENT_CMD)
 
-run-order: ## Run order-service
-	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+run-order: ## Run order-service against the local Redpanda broker and Redis
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC=$(KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC) KAFKA_PAYMENT_CAPTURED_TOPIC=$(KAFKA_PAYMENT_CAPTURED_TOPIC) KAFKA_PAYMENT_FAILED_TOPIC=$(KAFKA_PAYMENT_FAILED_TOPIC) KAFKA_PAYMENT_CREATION_FAILED_TOPIC=$(KAFKA_PAYMENT_CREATION_FAILED_TOPIC) KAFKA_ORDER_CONSUMER_GROUP=$(KAFKA_ORDER_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-order-kafka: ## Run order-service against the local Redpanda broker and Redis
-	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
+	ORDER_DATABASE_URL=$(ORDER_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC=$(KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC) KAFKA_PAYMENT_CAPTURED_TOPIC=$(KAFKA_PAYMENT_CAPTURED_TOPIC) KAFKA_PAYMENT_FAILED_TOPIC=$(KAFKA_PAYMENT_FAILED_TOPIC) KAFKA_PAYMENT_CREATION_FAILED_TOPIC=$(KAFKA_PAYMENT_CREATION_FAILED_TOPIC) KAFKA_ORDER_CONSUMER_GROUP=$(KAFKA_ORDER_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(ORDER_CMD)
 
 run-gateway: ## Run gateway-service
 	GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(GATEWAY_CMD)
@@ -193,14 +202,20 @@ db-migrate-down: ## Roll back the most recent shared PostgreSQL migration
 db-migrate-version: ## Show the current shared PostgreSQL migration version
 	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
 
+db-seed-demo: db-up ## Seed demo catalog products and inventory stock into shared PostgreSQL
+	$(COMPOSE) exec -T postgres psql -U "$(POSTGRES_USER)" -d "$(POSTGRES_DB)" -v ON_ERROR_STOP=1 \
+		-c "INSERT INTO catalog_products (id, name, description, price_cents, currency, created_at, updated_at) VALUES ('prod-1', 'Demo Coffee Beans', 'Primary demo catalog item', 1599, 1, NOW(), NOW()), ('prod-2', 'Demo Tea Pack', 'Secondary demo catalog item', 899, 1, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, price_cents = EXCLUDED.price_cents, currency = EXCLUDED.currency, updated_at = NOW();" \
+		-c "INSERT INTO inventory_stocks (product_id, available_quantity, reserved_quantity, total_quantity, created_at, updated_at) VALUES ('prod-1', 25, 0, 25, NOW(), NOW()), ('prod-2', 40, 0, 40, NOW(), NOW()) ON CONFLICT (product_id) DO UPDATE SET available_quantity = EXCLUDED.available_quantity, reserved_quantity = EXCLUDED.reserved_quantity, total_quantity = EXCLUDED.total_quantity, updated_at = NOW();"
+
 run-services: ## Print the recommended local startup order
 	@echo "Start services in separate terminals in this order:"
 	@echo "  make kafka-up"
 	@echo "  make db-prepare"
+	@echo "  make db-seed-demo"
 	@echo "  make run-catalog"
-	@echo "  make run-inventory-kafka"
-	@echo "  make run-payment-kafka"
-	@echo "  make run-order-kafka"
+	@echo "  make run-inventory"
+	@echo "  make run-payment"
+	@echo "  make run-order"
 	@echo "  make run-gateway"
 
 clean: ## Remove local build artifacts and cache
