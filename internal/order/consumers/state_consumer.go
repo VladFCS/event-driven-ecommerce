@@ -192,7 +192,7 @@ func NewInventoryReservationFailedConsumer(
 	)
 }
 
-func NewPaymentCreatedConsumer(
+func NewPaymentCapturedConsumer(
 	brokers []string,
 	topic string,
 	groupID string,
@@ -211,23 +211,67 @@ func NewPaymentCreatedConsumer(
 		orderService,
 		deduper,
 		logger,
-		sharedevents.PaymentCreatedEventType,
+		sharedevents.PaymentCapturedEventType,
 		func(ctx context.Context, orderService *service.OrderService, envelope sharedevents.Envelope) error {
-			var event sharedevents.PaymentCreated
+			var event sharedevents.PaymentCaptured
 			if err := json.Unmarshal(envelope.Payload, &event); err != nil {
-				return fmt.Errorf("decode payment.created payload: %w", err)
+				return fmt.Errorf("decode payment.captured payload: %w", err)
 			}
 
-			order, err := orderService.MarkPaymentCreated(ctx, event.OrderID)
+			order, err := orderService.MarkPaymentCaptured(ctx, event.OrderID)
 			if err != nil {
 				return err
 			}
 
 			logger.InfoContext(
 				ctx,
-				"order confirmed from payment.created",
+				"order confirmed from payment.captured",
 				slog.String("order_id", order.ID),
 				slog.String("status", order.Status.String()),
+				slog.String("payment_id", event.PaymentID),
+			)
+			return nil
+		},
+	)
+}
+
+func NewPaymentFailedConsumer(
+	brokers []string,
+	topic string,
+	groupID string,
+	orderService *service.OrderService,
+	deduper EventDeduplicator,
+	logger *slog.Logger,
+) *TopicConsumer {
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	return newTopicConsumer(
+		brokers,
+		topic,
+		groupID,
+		orderService,
+		deduper,
+		logger,
+		sharedevents.PaymentFailedEventType,
+		func(ctx context.Context, orderService *service.OrderService, envelope sharedevents.Envelope) error {
+			var event sharedevents.PaymentFailed
+			if err := json.Unmarshal(envelope.Payload, &event); err != nil {
+				return fmt.Errorf("decode payment.failed payload: %w", err)
+			}
+
+			order, err := orderService.MarkPaymentFailed(ctx, event.OrderID, event.FailureReason)
+			if err != nil {
+				return err
+			}
+
+			logger.InfoContext(
+				ctx,
+				"order cancelled from payment.failed",
+				slog.String("order_id", order.ID),
+				slog.String("status", order.Status.String()),
+				slog.String("cancel_reason", order.CancelReason),
 				slog.String("payment_id", event.PaymentID),
 			)
 			return nil

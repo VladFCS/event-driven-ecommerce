@@ -116,14 +116,25 @@ func main() {
 		}
 	}()
 
-	paymentCreatedConsumer, closePaymentCreatedConsumer, err := newPaymentCreatedConsumer(service, deduplicator, log)
+	paymentCapturedConsumer, closePaymentCapturedConsumer, err := newPaymentCapturedConsumer(service, deduplicator, log)
 	if err != nil {
-		log.Error("failed to configure payment.created consumer", slog.Any("error", err))
+		log.Error("failed to configure payment.captured consumer", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer func() {
-		if err := closePaymentCreatedConsumer(); err != nil {
-			log.Error("failed to close payment.created consumer", slog.Any("error", err))
+		if err := closePaymentCapturedConsumer(); err != nil {
+			log.Error("failed to close payment.captured consumer", slog.Any("error", err))
+		}
+	}()
+
+	paymentFailedConsumer, closePaymentFailedConsumer, err := newPaymentFailedConsumer(service, deduplicator, log)
+	if err != nil {
+		log.Error("failed to configure payment.failed consumer", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() {
+		if err := closePaymentFailedConsumer(); err != nil {
+			log.Error("failed to close payment.failed consumer", slog.Any("error", err))
 		}
 	}()
 
@@ -151,7 +162,7 @@ func main() {
 	outboxDispatcher := events.NewOutboxDispatcher(pool, publisher, log, outboxConfig)
 	serverErrCh := make(chan error, 1)
 	workerErrCh := make(chan error, 1)
-	consumerErrCh := make(chan error, 4)
+	consumerErrCh := make(chan error, 5)
 
 	go func() {
 		if err := outboxDispatcher.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -181,7 +192,8 @@ func main() {
 
 	startConsumer("inventory.reserved", inventoryReservedConsumer)
 	startConsumer("inventory.reservation_failed", inventoryReservationFailedConsumer)
-	startConsumer("payment.created", paymentCreatedConsumer)
+	startConsumer("payment.captured", paymentCapturedConsumer)
+	startConsumer("payment.failed", paymentFailedConsumer)
 	startConsumer("payment.creation_failed", paymentCreationFailedConsumer)
 
 	select {
@@ -362,26 +374,49 @@ func newInventoryReservationFailedConsumer(
 	return consumer, consumer.Close, nil
 }
 
-func newPaymentCreatedConsumer(
+func newPaymentCapturedConsumer(
 	service *service.OrderService,
 	deduplicator consumers.EventDeduplicator,
 	logger *slog.Logger,
 ) (*consumers.TopicConsumer, func() error, error) {
 	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
-	topic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CREATED_TOPIC", "payment.created"))
+	topic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CAPTURED_TOPIC", "payment.captured"))
 	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
 
 	if len(brokers) == 0 {
 		return nil, nil, errors.New("KAFKA_BROKERS is required")
 	}
 	if topic == "" {
-		return nil, nil, errors.New("KAFKA_PAYMENT_CREATED_TOPIC is required")
+		return nil, nil, errors.New("KAFKA_PAYMENT_CAPTURED_TOPIC is required")
 	}
 	if groupID == "" {
 		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
 	}
 
-	consumer := consumers.NewPaymentCreatedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	consumer := consumers.NewPaymentCapturedConsumer(brokers, topic, groupID, service, deduplicator, logger)
+	return consumer, consumer.Close, nil
+}
+
+func newPaymentFailedConsumer(
+	service *service.OrderService,
+	deduplicator consumers.EventDeduplicator,
+	logger *slog.Logger,
+) (*consumers.TopicConsumer, func() error, error) {
+	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
+	topic := strings.TrimSpace(getenv("KAFKA_PAYMENT_FAILED_TOPIC", "payment.failed"))
+	groupID := strings.TrimSpace(getenv("KAFKA_ORDER_CONSUMER_GROUP", "order-service"))
+
+	if len(brokers) == 0 {
+		return nil, nil, errors.New("KAFKA_BROKERS is required")
+	}
+	if topic == "" {
+		return nil, nil, errors.New("KAFKA_PAYMENT_FAILED_TOPIC is required")
+	}
+	if groupID == "" {
+		return nil, nil, errors.New("KAFKA_ORDER_CONSUMER_GROUP is required")
+	}
+
+	consumer := consumers.NewPaymentFailedConsumer(brokers, topic, groupID, service, deduplicator, logger)
 	return consumer, consumer.Close, nil
 }
 
