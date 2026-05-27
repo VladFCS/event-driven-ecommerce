@@ -96,9 +96,7 @@ func (s *PaymentService) CancelPayment(ctx context.Context, paymentID string, re
 	switch payment.Status {
 	case paymentv1.PaymentStatus_PAYMENT_STATUS_CANCELLED:
 		return payment, nil
-	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING,
-		paymentv1.PaymentStatus_PAYMENT_STATUS_REQUIRES_ACTION,
-		paymentv1.PaymentStatus_PAYMENT_STATUS_AUTHORIZED:
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING:
 		payment.Status = paymentv1.PaymentStatus_PAYMENT_STATUS_CANCELLED
 		payment.CancelReason = strings.TrimSpace(reason)
 		payment.UpdatedAt = time.Now()
@@ -108,26 +106,65 @@ func (s *PaymentService) CancelPayment(ctx context.Context, paymentID string, re
 	}
 }
 
-func (s *PaymentService) CapturePayment(ctx context.Context, paymentID string) (domain.Payment, error) {
+func (s *PaymentService) CapturePayment(ctx context.Context, paymentID string) (domain.Payment, bool, error) {
 	if strings.TrimSpace(paymentID) == "" {
-		return domain.Payment{}, domain.ErrInvalidPaymentID
+		return domain.Payment{}, false, domain.ErrInvalidPaymentID
 	}
 
 	payment, err := s.repository.GetPaymentByID(ctx, paymentID)
 	if err != nil {
-		return domain.Payment{}, err
+		return domain.Payment{}, false, err
 	}
 
 	switch payment.Status {
 	case paymentv1.PaymentStatus_PAYMENT_STATUS_CAPTURED:
-		return payment, nil
-	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING,
-		paymentv1.PaymentStatus_PAYMENT_STATUS_AUTHORIZED:
+		return payment, false, nil
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING:
 		payment.Status = paymentv1.PaymentStatus_PAYMENT_STATUS_CAPTURED
 		payment.UpdatedAt = time.Now()
-		return s.repository.UpdatePayment(ctx, payment)
+
+		updated, err := s.repository.UpdatePayment(ctx, payment)
+		if err != nil {
+			return domain.Payment{}, false, err
+		}
+
+		return updated, true, nil
 	default:
-		return domain.Payment{}, domain.ErrPaymentCannotBeCaptured
+		return domain.Payment{}, false, domain.ErrPaymentCannotBeCaptured
+	}
+}
+
+func (s *PaymentService) FailPayment(ctx context.Context, paymentID string, reason string) (domain.Payment, bool, error) {
+	if strings.TrimSpace(paymentID) == "" {
+		return domain.Payment{}, false, domain.ErrInvalidPaymentID
+	}
+
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return domain.Payment{}, false, domain.ErrInvalidPayment
+	}
+
+	payment, err := s.repository.GetPaymentByID(ctx, paymentID)
+	if err != nil {
+		return domain.Payment{}, false, err
+	}
+
+	switch payment.Status {
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_FAILED:
+		return payment, false, nil
+	case paymentv1.PaymentStatus_PAYMENT_STATUS_PENDING:
+		payment.Status = paymentv1.PaymentStatus_PAYMENT_STATUS_FAILED
+		payment.CancelReason = reason
+		payment.UpdatedAt = time.Now()
+
+		updated, err := s.repository.UpdatePayment(ctx, payment)
+		if err != nil {
+			return domain.Payment{}, false, err
+		}
+
+		return updated, true, nil
+	default:
+		return domain.Payment{}, false, domain.ErrPaymentCannotBeFailed
 	}
 }
 
