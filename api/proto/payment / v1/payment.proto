@@ -11,17 +11,16 @@ service PaymentService {
   rpc ListPaymentsByCustomer(ListPaymentsByCustomerRequest) returns (ListPaymentsByCustomerResponse);
   rpc CancelPayment(CancelPaymentRequest) returns (CancelPaymentResponse);
   rpc CapturePayment(CapturePaymentRequest) returns (CapturePaymentResponse);
+  rpc FailPayment(FailPaymentRequest) returns (FailPaymentResponse);
 }
 
 enum PaymentStatus {
   PAYMENT_STATUS_UNSPECIFIED = 0;
   PAYMENT_STATUS_PENDING = 1;
-  PAYMENT_STATUS_REQUIRES_ACTION = 2;
-  PAYMENT_STATUS_AUTHORIZED = 3;
+  reserved 2, 3, 7;
   PAYMENT_STATUS_CAPTURED = 4;
   PAYMENT_STATUS_FAILED = 5;
   PAYMENT_STATUS_CANCELLED = 6;
-  PAYMENT_STATUS_REFUNDED = 7;
 }
 
 enum Currency {
@@ -111,5 +110,14 @@ message CapturePaymentRequest {
 }
 
 message CapturePaymentResponse {
+  Payment payment = 1;
+}
+
+message FailPaymentRequest {
+  string payment_id = 1;
+  string reason = 2;
+}
+
+message FailPaymentResponse {
   Payment payment = 1;
 }
