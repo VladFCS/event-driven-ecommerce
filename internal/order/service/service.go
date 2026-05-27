@@ -173,7 +173,7 @@ func (s *OrderService) MarkInventoryReservationFailed(ctx context.Context, order
 	})
 }
 
-func (s *OrderService) MarkPaymentCreated(ctx context.Context, orderID string) (domain.Order, error) {
+func (s *OrderService) MarkPaymentCaptured(ctx context.Context, orderID string) (domain.Order, error) {
 	return s.transitionOrder(ctx, orderID, func(order domain.Order) (domain.Order, bool, error) {
 		switch order.Status {
 		case orderv1.OrderStatus_ORDER_STATUS_CONFIRMED:
@@ -184,6 +184,24 @@ func (s *OrderService) MarkPaymentCreated(ctx context.Context, orderID string) (
 			order.Status = orderv1.OrderStatus_ORDER_STATUS_CONFIRMED
 			order.CancelReason = ""
 			order.UpdatedAt = time.Now()
+			return order, true, nil
+		default:
+			return order, false, nil
+		}
+	})
+}
+
+func (s *OrderService) MarkPaymentFailed(ctx context.Context, orderID string, reason string) (domain.Order, error) {
+	if strings.TrimSpace(reason) == "" {
+		reason = "payment failed"
+	}
+
+	return s.transitionOrder(ctx, orderID, func(order domain.Order) (domain.Order, bool, error) {
+		switch order.Status {
+		case orderv1.OrderStatus_ORDER_STATUS_CANCELLED:
+			return order, false, nil
+		case orderv1.OrderStatus_ORDER_STATUS_PENDING, orderv1.OrderStatus_ORDER_STATUS_AWAITING_PAYMENT:
+			order = cancelOrderWithReason(order, reason)
 			return order, true, nil
 		default:
 			return order, false, nil

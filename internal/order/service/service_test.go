@@ -9,10 +9,10 @@ import (
 )
 
 type stubOrderRepository struct {
-	ordersByID              map[string]domain.Order
-	ordersByIdempotencyKey  map[string]string
-	createErr               error
-	updateErr               error
+	ordersByID             map[string]domain.Order
+	ordersByIdempotencyKey map[string]string
+	createErr              error
+	updateErr              error
 }
 
 func newStubOrderRepository() *stubOrderRepository {
@@ -160,7 +160,7 @@ func TestMarkInventoryReservedTransitionsToAwaitingPayment(t *testing.T) {
 	}
 }
 
-func TestMarkPaymentCreatedTransitionsToConfirmed(t *testing.T) {
+func TestMarkPaymentCapturedTransitionsToConfirmed(t *testing.T) {
 	t.Parallel()
 
 	repo := newStubOrderRepository()
@@ -170,12 +170,34 @@ func TestMarkPaymentCreatedTransitionsToConfirmed(t *testing.T) {
 	repo.ordersByID[order.ID] = order
 
 	service := NewOrderService(repo)
-	updated, err := service.MarkPaymentCreated(context.Background(), order.ID)
+	updated, err := service.MarkPaymentCaptured(context.Background(), order.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if updated.Status != orderv1.OrderStatus_ORDER_STATUS_CONFIRMED {
 		t.Fatalf("expected confirmed, got %s", updated.Status.String())
+	}
+}
+
+func TestMarkPaymentFailedCancelsOrderWithReason(t *testing.T) {
+	t.Parallel()
+
+	repo := newStubOrderRepository()
+	order := validOrder()
+	order.ID = "ord-1"
+	order.Status = orderv1.OrderStatus_ORDER_STATUS_AWAITING_PAYMENT
+	repo.ordersByID[order.ID] = order
+
+	service := NewOrderService(repo)
+	updated, err := service.MarkPaymentFailed(context.Background(), order.ID, "card declined")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if updated.Status != orderv1.OrderStatus_ORDER_STATUS_CANCELLED {
+		t.Fatalf("expected cancelled, got %s", updated.Status.String())
+	}
+	if updated.CancelReason != "card declined" {
+		t.Fatalf("expected cancel reason to be persisted, got %q", updated.CancelReason)
 	}
 }
 
@@ -189,14 +211,14 @@ func TestMarkPaymentCreationFailedCancelsOrderWithReason(t *testing.T) {
 	repo.ordersByID[order.ID] = order
 
 	service := NewOrderService(repo)
-	updated, err := service.MarkPaymentCreationFailed(context.Background(), order.ID, "card declined")
+	updated, err := service.MarkPaymentCreationFailed(context.Background(), order.ID, "payment creation failed")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if updated.Status != orderv1.OrderStatus_ORDER_STATUS_CANCELLED {
 		t.Fatalf("expected cancelled, got %s", updated.Status.String())
 	}
-	if updated.CancelReason != "card declined" {
+	if updated.CancelReason != "payment creation failed" {
 		t.Fatalf("expected cancel reason to be persisted, got %q", updated.CancelReason)
 	}
 }
