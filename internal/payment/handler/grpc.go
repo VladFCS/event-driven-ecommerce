@@ -9,21 +9,26 @@ import (
 	paymentv1 "github.com/vladfc/event-driven-ecommerce-app/gen/payment/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/domain"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/service"
+	sharedevents "github.com/vladfc/event-driven-ecommerce-app/internal/shared/events"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/shared/requestid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/vladfc/event-driven-ecommerce-app/internal/payment/events"
 )
 
 type GRPCHandler struct {
 	paymentv1.UnimplementedPaymentServiceServer
-	service *service.PaymentService
-	logger  *slog.Logger
+	service   *service.PaymentService
+	publisher events.Publisher
+	logger    *slog.Logger
 }
 
-func NewGRPCHandler(service *service.PaymentService, logger *slog.Logger) *GRPCHandler {
+func NewGRPCHandler(service *service.PaymentService, publisher events.Publisher, logger *slog.Logger) *GRPCHandler {
 	return &GRPCHandler{
-		service: service,
-		logger:  logger,
+		service:   service,
+		publisher: publisher,
+		logger:    logger,
 	}
 }
 
@@ -131,9 +136,20 @@ func (h *GRPCHandler) CancelPayment(ctx context.Context, req *paymentv1.CancelPa
 }
 
 func (h *GRPCHandler) CapturePayment(ctx context.Context, req *paymentv1.CapturePaymentRequest) (*paymentv1.CapturePaymentResponse, error) {
-	payment, err := h.service.CapturePayment(ctx, req.GetPaymentId())
+	payment, transitioned, err := h.service.CapturePayment(ctx, req.GetPaymentId())
 	if err != nil {
 		return nil, mapPaymentError(err)
+	}
+
+	if transitioned {
+		if err := h.publisher.PublishPaymentCaptured(ctx, payment.ID, sharedevents.PaymentCaptured{
+			OrderID:    payment.OrderID,
+			CustomerID: payment.CustomerID,
+			PaymentID:  payment.ID,
+			Status:     payment.Status.String(),
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to publish payment.captured event")
+		}
 	}
 
 	h.logger.InfoContext(
@@ -144,9 +160,45 @@ func (h *GRPCHandler) CapturePayment(ctx context.Context, req *paymentv1.Capture
 		slog.String("order_id", payment.OrderID),
 		slog.String("customer_id", payment.CustomerID),
 		slog.String("status", payment.Status.String()),
+		slog.Bool("transitioned", transitioned),
 	)
 
 	return &paymentv1.CapturePaymentResponse{
+		Payment: convertPaymentToProto(payment),
+	}, nil
+}
+
+func (h *GRPCHandler) FailPayment(ctx context.Context, req *paymentv1.FailPaymentRequest) (*paymentv1.FailPaymentResponse, error) {
+	payment, transitioned, err := h.service.FailPayment(ctx, req.GetPaymentId(), req.GetReason())
+	if err != nil {
+		return nil, mapPaymentError(err)
+	}
+
+	if transitioned {
+		if err := h.publisher.PublishPaymentFailed(ctx, payment.ID, sharedevents.PaymentFailed{
+			OrderID:       payment.OrderID,
+			CustomerID:    payment.CustomerID,
+			PaymentID:     payment.ID,
+			Status:        payment.Status.String(),
+			FailureReason: payment.CancelReason,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to publish payment.failed event")
+		}
+	}
+
+	h.logger.InfoContext(
+		ctx,
+		"payment failed",
+		requestIDAttr(ctx),
+		slog.String("payment_id", payment.ID),
+		slog.String("order_id", payment.OrderID),
+		slog.String("customer_id", payment.CustomerID),
+		slog.String("status", payment.Status.String()),
+		slog.String("reason", payment.CancelReason),
+		slog.Bool("transitioned", transitioned),
+	)
+
+	return &paymentv1.FailPaymentResponse{
 		Payment: convertPaymentToProto(payment),
 	}, nil
 }
@@ -191,9 +243,9 @@ func mapPaymentError(err error) error {
 	case errors.Is(err, domain.ErrPaymentAlreadyExists),
 		errors.Is(err, domain.ErrIdempotencyKeyAlreadyExists):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Is(err, domain.ErrPaymentCannotBeCancelled):
-		return status.Error(codes.FailedPrecondition, err.Error())
-	case errors.Is(err, domain.ErrPaymentCannotBeCaptured):
+	case errors.Is(err, domain.ErrPaymentCannotBeCancelled),
+		errors.Is(err, domain.ErrPaymentCannotBeCaptured),
+		errors.Is(err, domain.ErrPaymentCannotBeFailed):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	default:
 		return status.Error(codes.Internal, "internal server error")

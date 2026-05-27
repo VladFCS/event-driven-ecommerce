@@ -42,9 +42,6 @@ func main() {
 	}
 	defer closeRepository()
 
-	service := service.NewPaymentService(paymentRepository)
-	grpcHandler := handler.NewGRPCHandler(service, log)
-
 	publisher, closePublisher, err := newPaymentEventPublisher(log)
 	if err != nil {
 		log.Error("failed to configure payment event publisher", slog.Any("error", err))
@@ -55,6 +52,9 @@ func main() {
 			log.Error("failed to close payment event publisher", slog.Any("error", err))
 		}
 	}()
+
+	service := service.NewPaymentService(paymentRepository)
+	grpcHandler := handler.NewGRPCHandler(service, publisher, log)
 
 	deduplicator, closeDeduplicator, err := newPaymentEventDeduplicator(log)
 	if err != nil {
@@ -150,6 +150,8 @@ func newPaymentEventPublisher(logger *slog.Logger) (events.Publisher, func() err
 	brokers := parseKafkaBrokers(getenv("KAFKA_BROKERS", ""))
 	createdTopic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CREATED_TOPIC", "payment.created"))
 	failedTopic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CREATION_FAILED_TOPIC", "payment.creation_failed"))
+	capturedTopic := strings.TrimSpace(getenv("KAFKA_PAYMENT_CAPTURED_TOPIC", "payment.captured"))
+	paymentFailedTopic := strings.TrimSpace(getenv("KAFKA_PAYMENT_FAILED_TOPIC", "payment.failed"))
 
 	if len(brokers) == 0 {
 		return nil, nil, errors.New("KAFKA_BROKERS is required")
@@ -160,8 +162,22 @@ func newPaymentEventPublisher(logger *slog.Logger) (events.Publisher, func() err
 	if failedTopic == "" {
 		return nil, nil, errors.New("KAFKA_PAYMENT_CREATION_FAILED_TOPIC is required")
 	}
+	if capturedTopic == "" {
+		return nil, nil, errors.New("KAFKA_PAYMENT_CAPTURED_TOPIC is required")
+	}
+	if paymentFailedTopic == "" {
+		return nil, nil, errors.New("KAFKA_PAYMENT_FAILED_TOPIC is required")
+	}
 
-	publisher := events.NewKafkaPublisher(brokers, createdTopic, failedTopic, logger)
+	publisher := events.NewKafkaPublisher(
+		brokers,
+		createdTopic,
+		failedTopic,
+		capturedTopic,
+		paymentFailedTopic,
+		logger,
+	)
+
 	return publisher, publisher.Close, nil
 }
 
