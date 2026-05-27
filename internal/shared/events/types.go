@@ -9,8 +9,9 @@ const (
 	InventoryReservationFailedEventType = "inventory.reservation_failed"
 	PaymentCreatedEventType             = "payment.created"
 	PaymentCreationFailedEventType      = "payment.creation_failed"
+	PaymentCapturedEventType            = "payment.captured"
+	PaymentFailedEventType              = "payment.failed"
 )
-
 type Envelope struct {
 	EventID    string          `json:"event_id"`
 	EventType  string          `json:"event_type"`
@@ -92,5 +93,20 @@ type PaymentCreated struct {
 type PaymentCreationFailed struct {
 	OrderID       string `json:"order_id"`
 	CustomerID    string `json:"customer_id"`
+	FailureReason string `json:"failure_reason"`
+}
+
+type PaymentCaptured struct {
+	OrderID    string `json:"order_id"`
+	CustomerID string `json:"customer_id"`
+	PaymentID  string `json:"payment_id"`
+	Status     string `json:"status"`
+}
+
+type PaymentFailed struct {
+	OrderID       string `json:"order_id"`
+	CustomerID    string `json:"customer_id"`
+	PaymentID     string `json:"payment_id"`
+	Status        string `json:"status"`
 	FailureReason string `json:"failure_reason"`
 }
