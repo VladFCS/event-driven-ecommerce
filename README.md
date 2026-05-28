@@ -249,6 +249,7 @@ Expected result:
 
 ```bash
 make help
+make lint
 make build
 make test
 make proto

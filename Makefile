@@ -3,6 +3,8 @@
 GO ?= go
 PROTOC ?= protoc
 GOFMT ?= gofmt
+GOLANGCI_LINT ?= golangci-lint
+GOLANGCI_LINT_PKG ?= github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 GOVULNCHECK ?= govulncheck
 GOVULNCHECK_PKG ?= golang.org/x/vuln/cmd/govulncheck@latest
 SQLC ?= sqlc
@@ -11,6 +13,7 @@ MIGRATE ?= migrate
 MIGRATE_PKG ?= github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 GOFLAGS ?= -buildvcs=false
 GOCACHE ?= $(CURDIR)/.cache/go-build
+GOLANGCI_LINT_CACHE ?= $(CURDIR)/.cache/golangci-lint
 BIN_DIR ?= $(CURDIR)/bin
 PROTO_DIR := api/proto
 GEN_DIR := gen
@@ -48,7 +51,7 @@ KAFKA_INVENTORY_CONSUMER_GROUP ?= inventory-service
 KAFKA_PAYMENT_CONSUMER_GROUP ?= payment-service
 KAFKA_ORDER_CONSUMER_GROUP ?= order-service
 
-.PHONY: help doctor fmt vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
+.PHONY: help doctor fmt lint lint-install vet test govulncheck govulncheck-install check tidy proto proto-check build clean \
 	build-catalog build-inventory build-payment build-order build-gateway \
 	run-catalog run-inventory run-inventory-kafka run-payment run-payment-kafka run-order run-order-kafka run-gateway run-services \
 	kafka-up kafka-down kafka-logs db-up db-down db-logs db-prepare db-migrate-up db-migrate-down db-migrate-version db-seed-demo \
@@ -60,6 +63,7 @@ help: ## Show available targets
 doctor: ## Check required local tooling
 	@command -v $(GO) >/dev/null || { echo "$(GO) is not installed or not in PATH"; exit 1; }
 	@command -v $(GOFMT) >/dev/null || { echo "$(GOFMT) is not installed or not in PATH"; exit 1; }
+	@command -v $(GOLANGCI_LINT) >/dev/null || { echo "$(GOLANGCI_LINT) is not installed or not in PATH"; echo "install it with: make lint-install"; exit 1; }
 	@command -v $(GOVULNCHECK) >/dev/null || { echo "$(GOVULNCHECK) is not installed or not in PATH"; exit 1; }
 	@command -v $(PROTOC) >/dev/null || { echo "$(PROTOC) is not installed or not in PATH"; exit 1; }
 	@command -v protoc-gen-go >/dev/null || { echo "protoc-gen-go is not installed or not in PATH"; exit 1; }
@@ -70,6 +74,22 @@ doctor: ## Check required local tooling
 
 fmt: ## Format Go code
 	$(GOFMT) -w $$(find . -type f -name '*.go' -not -path './vendor/*')
+
+lint: ## Run golangci-lint across the module
+	@command -v $(GOLANGCI_LINT) >/dev/null || { \
+		echo "$(GOLANGCI_LINT) is not installed or not in PATH"; \
+		echo "install it with: make lint-install"; \
+		exit 1; \
+	}
+	@GOCACHE=$(GOCACHE) GOLANGCI_LINT_CACHE=$(GOLANGCI_LINT_CACHE) $(GOLANGCI_LINT) run --timeout=5m ./... || { \
+		echo ""; \
+		echo "golangci-lint failed"; \
+		echo "if your Go version was upgraded recently, rebuild the tool with: make lint-install"; \
+		exit 1; \
+	}
+
+lint-install: ## Install or rebuild golangci-lint with the current Go toolchain
+	GOCACHE=$(GOCACHE) $(GO) install $(GOLANGCI_LINT_PKG)
 
 vet: ## Run go vet
 	GOCACHE=$(GOCACHE) $(GO) vet $(GOFLAGS) ./...
@@ -105,7 +125,7 @@ sqlc-generate: ## Generate Go code from SQL using sqlc
 sqlc-verify: ## Verify sqlc configuration and generated code are up to date
 	$(SQLC) vet
 
-check: vet test govulncheck ## Run the default verification suite
+check: lint vet test govulncheck ## Run the default verification suite
 
 tidy: ## Tidy go.mod and go.sum
 	$(GO) mod tidy

@@ -10,7 +10,7 @@ Status markers:
 ## Phase 1: Showcase-ready foundation
 
 ### 1. Add automated tests
-- [ ] Add unit tests for `order-service`
+- [x] Add unit tests for `order-service`
 - [ ] Add unit tests for `inventory-service`
 - [ ] Add payment idempotency tests
 - [ ] Add gateway handler tests for key endpoints
@@ -24,26 +24,26 @@ Status markers:
 - [x] Add local run instructions for all services
 
 ### 3. Add local infrastructure
-- [ ] Add `docker-compose.yml`
-- [ ] Add Kafka container
-- [ ] Add PostgreSQL container
+- [~] Add `docker-compose.yml` (implemented as `compose.yaml`)
+- [x] Add Kafka container
+- [x] Add PostgreSQL container
 - [ ] Add MongoDB container
-- [ ] Add Redis container
-- [ ] Add optional Kafka UI
+- [x] Add Redis container
+- [x] Add optional Kafka UI
 
 ### 4. Improve project presentation
 - [x] Add architecture diagram to README
-- [ ] Add sample requests and responses
-- [~] Add service responsibility table
+- [~] Add sample requests and responses
+- [x] Add service responsibility table
 - [x] Add note about what is implemented today vs target architecture
 
 ## Phase 2: Move core state out of memory
 
 ### 5. Replace memory repositories
-- [ ] Move orders to PostgreSQL
-- [ ] Move payments to PostgreSQL
-- [ ] Move inventory to PostgreSQL
-- [ ] Move catalog to MongoDB
+- [x] Move orders to PostgreSQL
+- [x] Move payments to PostgreSQL
+- [x] Move inventory to PostgreSQL
+- [ ] Move catalog to MongoDB (catalog currently uses PostgreSQL)
 
 ### 6. Introduce Redis where it adds value
 - [ ] Idempotency key storage
@@ -53,83 +53,92 @@ Status markers:
 ## Phase 3: Introduce real event-driven flow
 
 ### 7. Define event contracts
-- [ ] Create event envelope
-- [ ] Add `event_id`
-- [ ] Add `event_type`
-- [ ] Add `aggregate_id`
-- [ ] Add `occurred_at`
+- [x] Create event envelope
+- [x] Add `event_id`
+- [x] Add `event_type`
+- [~] Add `aggregate_id`
+- [x] Add `occurred_at`
 - [ ] Add `correlation_id`
 - [ ] Add `request_id`
 - [ ] Add payload versioning
 
 ### 8. Define first business events
-- [ ] `order.created`
-- [ ] `inventory.reserved`
-- [ ] `inventory.failed`
-- [ ] `payment.created`
-- [ ] `payment.failed`
-- [ ] `order.cancelled`
+- [x] `order.created`
+- [x] `inventory.reserved`
+- [~] `inventory.failed` (implemented as `inventory.reservation_failed`)
+- [x] `payment.created`
+- [x] `payment.captured`
+- [x] `payment.failed`
+- [x] `order.cancelled`
 
 ### 9. Add Kafka producer/consumer infrastructure
-- [ ] Producer abstraction
-- [ ] Consumer abstraction
-- [ ] Topic naming convention
-- [ ] Retry policy
-- [ ] Consumer logging
+- [x] Producer abstraction
+- [~] Consumer abstraction
+- [x] Topic naming convention
+- [~] Retry policy
+- [x] Consumer logging
 
 ## Phase 4: Build first asynchronous workflow
 
 ### 10. Convert checkout into a real async flow
-- [ ] Gateway submits checkout command
-- [ ] `order-service` creates order and publishes `order.created`
-- [ ] `inventory-service` consumes `order.created`
-- [ ] Inventory publishes success or failure
-- [ ] `payment-service` consumes `inventory.reserved`
-- [ ] Payment publishes success or failure
-- [ ] `order-service` consumes final outcome and updates order state
+- [x] Gateway submits checkout command
+- [x] `order-service` creates order and publishes `order.created`
+- [x] `inventory-service` consumes `order.created`
+- [x] Inventory publishes success or failure
+- [x] `payment-service` consumes `inventory.reserved`
+- [x] Payment publishes success or failure
+- [x] Payment outcome can be triggered manually for local demo flow
+- [x] `order-service` consumes final outcome and updates order state
 
 ### 11. Define order lifecycle states
-- [ ] `PENDING`
-- [ ] `AWAITING_INVENTORY`
-- [ ] `INVENTORY_RESERVED`
-- [ ] `PAYMENT_PENDING`
-- [ ] `CONFIRMED`
+- [x] `PENDING`
+- [x] `AWAITING_PAYMENT`
+- [x] `CONFIRMED`
 - [ ] `FAILED`
-- [ ] `CANCELLED`
+- [x] `CANCELLED`
+
+Current implementation note:
+- `AWAITING_PAYMENT` is the current intermediate order state
+- separate `AWAITING_INVENTORY`, `INVENTORY_RESERVED`, and `PAYMENT_PENDING` states are not implemented
 
 ## Phase 5: Make event processing production-minded
 
 ### 12. Add idempotent consumers
-- [ ] Prevent duplicate processing
-- [ ] Track processed events
-- [ ] Make handlers replay-safe
+- [x] Prevent duplicate processing
+- [x] Track processed events
+- [x] Make handlers replay-safe
 
 ### 13. Add outbox pattern
-- [ ] Store business state and event in one transaction
-- [ ] Publish from outbox worker
-- [ ] Handle retry and publish recovery
+- [~] Store business state and event in one transaction
+- [~] Publish from outbox worker
+- [~] Handle retry and publish recovery
+
+Current implementation note:
+- outbox is implemented for `order-service`
+- inventory and payment publishers are still direct Kafka writes
+- `payment-service` still publishes outcome events directly after DB update
 
 ### 14. Add failure handling
-- [ ] Retry transient failures
-- [ ] Add dead-letter topic or failure topic
-- [ ] Add compensating event paths
+- [~] Retry transient failures
+- [x] Add dead-letter topic or failure topic
+- [x] Add compensating event paths
 
 ## Phase 6: Observability and operations
 
 ### 15. Add metrics
-- [ ] Requests by endpoint
+- [x] Requests by endpoint
 - [ ] gRPC call failures
 - [ ] Events published
 - [ ] Events consumed
 - [ ] Consumer retries
 - [ ] DLQ counts
-- [ ] Checkout latency
+- [~] Checkout latency
 
 ### 16. Improve structured logging
-- [ ] Include `request_id`
+- [x] Include `request_id`
 - [ ] Include `correlation_id`
-- [ ] Include `order_id`
-- [ ] Include event type and handler name
+- [~] Include `order_id`
+- [~] Include event type and handler name
 
 ### 17. Add tracing mindset
 - [ ] Propagate correlation IDs
@@ -150,7 +159,7 @@ Status markers:
 
 ### 20. Add containerization
 - [ ] Dockerfiles for all services
-- [ ] Compose-based local startup
+- [x] Compose-based local startup
 
 ### 21. Add Kubernetes manifests
 - [ ] Deployments
