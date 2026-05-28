@@ -28,28 +28,28 @@ func main() {
 	inventoryServiceAddr := getenv("INVENTORY_SERVICE_ADDR", "localhost:50052")
 	paymentServiceAddr := getenv("PAYMENT_SERVICE_ADDR", "localhost:50053")
 
-	catalogConn, err := grpc.Dial(catalogServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	catalogConn, err := grpc.NewClient(catalogServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to connect to catalog-service", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer catalogConn.Close()
 
-	orderConn, err := grpc.Dial(orderServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	orderConn, err := grpc.NewClient(orderServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to connect to order-service", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer orderConn.Close()
 
-	inventoryConn, err := grpc.Dial(inventoryServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	inventoryConn, err := grpc.NewClient(inventoryServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to connect to inventory-service", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer inventoryConn.Close()
 
-	paymentConn, err := grpc.Dial(paymentServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	paymentConn, err := grpc.NewClient(paymentServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Error("failed to connect to payment-service", slog.Any("error", err))
 		os.Exit(1)
