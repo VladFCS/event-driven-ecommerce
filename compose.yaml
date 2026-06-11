@@ -45,5 +45,13 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  mongo:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
 volumes:
   postgres-data:
+  mongo-data:
