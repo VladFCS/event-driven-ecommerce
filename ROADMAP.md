@@ -43,7 +43,7 @@ Status markers:
 - [x] Move orders to PostgreSQL
 - [x] Move payments to PostgreSQL
 - [x] Move inventory to PostgreSQL
-- [ ] Move catalog to MongoDB (catalog currently uses PostgreSQL)
+- [x] Move catalog to MongoDB
 
 ### 6. Introduce Redis where it adds value
 - [ ] Idempotency key storage

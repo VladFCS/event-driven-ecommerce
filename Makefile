@@ -39,7 +39,11 @@ POSTGRES_DB ?= ecommerce
 POSTGRES_USER ?= app
 POSTGRES_PASSWORD ?= app
 DATABASE_URL ?= postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
-CATALOG_DATABASE_URL ?= $(DATABASE_URL)
+MONGO_HOST ?= localhost
+MONGO_PORT ?= 27017
+CATALOG_MONGO_URI ?= mongodb://$(MONGO_HOST):$(MONGO_PORT)
+CATALOG_MONGO_DATABASE ?= ecommerce
+CATALOG_MONGO_COLLECTION ?= catalog_products
 INVENTORY_DATABASE_URL ?= $(DATABASE_URL)
 PAYMENT_DATABASE_URL ?= $(DATABASE_URL)
 ORDER_DATABASE_URL ?= $(DATABASE_URL)
@@ -170,7 +174,7 @@ build-gateway: ## Build gateway-service binary
 	GOCACHE=$(GOCACHE) $(GO) build $(GOFLAGS) -o "$(BIN_DIR)/gateway-service" $(GATEWAY_CMD)
 
 run-catalog: ## Run catalog-service
-	CATALOG_DATABASE_URL=$(CATALOG_DATABASE_URL) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(CATALOG_CMD)
+	CATALOG_MONGO_URI=$(CATALOG_MONGO_URI) CATALOG_MONGO_DATABASE=$(CATALOG_MONGO_DATABASE) CATALOG_MONGO_COLLECTION=$(CATALOG_MONGO_COLLECTION) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(CATALOG_CMD)
 
 run-inventory: ## Run inventory-service against the local Redpanda broker and Redis
 	INVENTORY_DATABASE_URL=$(INVENTORY_DATABASE_URL) KAFKA_BROKERS=$(KAFKA_BROKERS) KAFKA_ORDER_CREATED_TOPIC=$(KAFKA_ORDER_CREATED_TOPIC) KAFKA_ORDER_CANCELLED_TOPIC=$(KAFKA_ORDER_CANCELLED_TOPIC) KAFKA_INVENTORY_RESERVED_TOPIC=$(KAFKA_INVENTORY_RESERVED_TOPIC) KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC=$(KAFKA_INVENTORY_RESERVATION_FAILED_TOPIC) KAFKA_INVENTORY_CONSUMER_GROUP=$(KAFKA_INVENTORY_CONSUMER_GROUP) REDIS_ADDR=$(REDIS_ADDR) GOCACHE=$(GOCACHE) $(GO) run $(GOFLAGS) $(INVENTORY_CMD)
@@ -202,14 +206,14 @@ kafka-down: ## Stop local Redpanda + Console
 kafka-logs: ## Tail local Redpanda + Console + Redis logs
 	$(COMPOSE) logs -f redpanda redpanda-console redis
 
-db-up: ## Start local PostgreSQL
-	$(COMPOSE) up -d postgres
+db-up: ## Start local PostgreSQL and MongoDB
+	$(COMPOSE) up -d postgres mongo
 
-db-down: ## Stop local PostgreSQL
-	$(COMPOSE) stop postgres
+db-down: ## Stop local PostgreSQL and MongoDB
+	$(COMPOSE) stop postgres mongo
 
-db-logs: ## Tail local PostgreSQL logs
-	$(COMPOSE) logs -f postgres
+db-logs: ## Tail local PostgreSQL and MongoDB logs
+	$(COMPOSE) logs -f postgres mongo
 
 db-prepare: db-up db-migrate-up ## Start shared PostgreSQL and apply shared service migrations
 
@@ -222,9 +226,9 @@ db-migrate-down: ## Roll back the most recent shared PostgreSQL migration
 db-migrate-version: ## Show the current shared PostgreSQL migration version
 	$(MIGRATE) -path $(DB_MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
 
-db-seed-demo: db-up ## Seed demo catalog products and inventory stock into shared PostgreSQL
+db-seed-demo: db-up ## Seed demo catalog products into MongoDB and inventory stock into shared PostgreSQL
+	$(COMPOSE) exec -T mongo mongosh "$(CATALOG_MONGO_DATABASE)" --quiet --eval 'const now = new Date(); db.getCollection("$(CATALOG_MONGO_COLLECTION)").updateOne({_id: "prod-1"}, {$$set: {name: "Demo Coffee Beans", description: "Primary demo catalog item", price_cents: NumberLong("1599"), currency: NumberInt(1), updated_at: now}, $$setOnInsert: {created_at: now}}, {upsert: true}); db.getCollection("$(CATALOG_MONGO_COLLECTION)").updateOne({_id: "prod-2"}, {$$set: {name: "Demo Tea Pack", description: "Secondary demo catalog item", price_cents: NumberLong("899"), currency: NumberInt(1), updated_at: now}, $$setOnInsert: {created_at: now}}, {upsert: true});'
 	$(COMPOSE) exec -T postgres psql -U "$(POSTGRES_USER)" -d "$(POSTGRES_DB)" -v ON_ERROR_STOP=1 \
-		-c "INSERT INTO catalog_products (id, name, description, price_cents, currency, created_at, updated_at) VALUES ('prod-1', 'Demo Coffee Beans', 'Primary demo catalog item', 1599, 1, NOW(), NOW()), ('prod-2', 'Demo Tea Pack', 'Secondary demo catalog item', 899, 1, NOW(), NOW()) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, price_cents = EXCLUDED.price_cents, currency = EXCLUDED.currency, updated_at = NOW();" \
 		-c "INSERT INTO inventory_stocks (product_id, available_quantity, reserved_quantity, total_quantity, created_at, updated_at) VALUES ('prod-1', 25, 0, 25, NOW(), NOW()), ('prod-2', 40, 0, 40, NOW(), NOW()) ON CONFLICT (product_id) DO UPDATE SET available_quantity = EXCLUDED.available_quantity, reserved_quantity = EXCLUDED.reserved_quantity, total_quantity = EXCLUDED.total_quantity, updated_at = NOW();"
 
 run-services: ## Print the recommended local startup order

@@ -4,6 +4,7 @@ Go-based ecommerce backend prototype built with:
 - `Gin` for the public HTTP API gateway
 - `gRPC` for internal service-to-service communication
 - `PostgreSQL` for shared transactional persistence across local services
+- `MongoDB` for catalog product documents
 - `Kafka` via Redpanda for asynchronous workflow events
 - `Redis` for event deduplication
 
@@ -91,13 +92,14 @@ Failure path:
 - publishes payment outcome events
 
 ### `catalog-service`
-- stores catalog products in Postgres
+- stores catalog products in MongoDB
 - serves product reads and product CRUD
 
 ## Local Stack
 
 `compose.yaml` starts:
 - `postgres` on `localhost:5432`
+- `mongo` on `localhost:27017`
 - `redpanda` on `localhost:19092`
 - `redpanda-console` on `http://localhost:8081`
 - `redis` on `localhost:6379`
@@ -119,7 +121,7 @@ make doctor
 
 ## Run Everything Locally
 
-### 1. Start Kafka, Redis, and Postgres
+### 1. Start Kafka, Redis, Postgres, and MongoDB
 
 ```bash
 make kafka-up
@@ -133,7 +135,7 @@ make db-seed-demo
 ```
 
 This creates:
-- catalog products: `prod-1`, `prod-2`
+- catalog products in MongoDB: `prod-1`, `prod-2`
 - inventory stock rows for the same product IDs
 
 ### 3. Start services in separate terminals

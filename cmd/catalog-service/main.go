@@ -12,11 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	catalogv1 "github.com/vladfc/event-driven-ecommerce-app/gen/catalog/v1"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/handler"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/repository"
 	"github.com/vladfc/event-driven-ecommerce-app/internal/catalog/service"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -76,25 +77,49 @@ func getenv(key, fallback string) string {
 }
 
 func newCatalogRepository(logger *slog.Logger) (repository.ProductRepository, func(), error) {
-	databaseURL := strings.TrimSpace(getenv("CATALOG_DATABASE_URL", ""))
-	if databaseURL == "" {
-		return nil, nil, errors.New("CATALOG_DATABASE_URL is required")
+	mongoURI := strings.TrimSpace(getenv("CATALOG_MONGO_URI", "mongodb://localhost:27017"))
+	if mongoURI == "" {
+		return nil, nil, errors.New("CATALOG_MONGO_URI is required")
 	}
 
-	pool, err := pgxpool.New(context.Background(), databaseURL)
+	databaseName := strings.TrimSpace(getenv("CATALOG_MONGO_DATABASE", "ecommerce"))
+	if databaseName == "" {
+		return nil, nil, errors.New("CATALOG_MONGO_DATABASE is required")
+	}
+
+	collectionName := strings.TrimSpace(getenv("CATALOG_MONGO_COLLECTION", "catalog_products"))
+	if collectionName == "" {
+		return nil, nil, errors.New("CATALOG_MONGO_COLLECTION is required")
+	}
+
+	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		return nil, nil, fmt.Errorf("connect to postgres: %w", err)
+		return nil, nil, fmt.Errorf("connect to mongo: %w", err)
 	}
 
 	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := pool.Ping(pingCtx); err != nil {
-		pool.Close()
-		return nil, nil, fmt.Errorf("ping postgres: %w", err)
+	if err := client.Ping(pingCtx, nil); err != nil {
+		_ = client.Disconnect(context.Background())
+		return nil, nil, fmt.Errorf("ping mongo: %w", err)
 	}
 
-	logger.Info("configured postgres catalog repository")
+	collection := client.Database(databaseName).Collection(collectionName)
+	closeRepository := func() {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
 
-	return repository.NewPostgresRepository(pool), pool.Close, nil
+		if err := client.Disconnect(shutdownCtx); err != nil {
+			logger.Error("failed to disconnect mongo client", slog.Any("error", err))
+		}
+	}
+
+	logger.Info(
+		"configured mongo catalog repository",
+		slog.String("database", databaseName),
+		slog.String("collection", collectionName),
+	)
+
+	return repository.NewMongoRepository(collection), closeRepository, nil
 }
